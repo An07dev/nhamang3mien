@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Wifi, Tv, Building2, Check, Flame, Shield, ArrowRight, Phone } from 'lucide-react';
+import { useContact } from '@/context/ContactContext';
 
 export interface PackageItem {
   id?: string;
@@ -13,18 +14,18 @@ export interface PackageItem {
   isPopular?: boolean;
   tag?: string;
   theme?:
-    | 'orange'
-    | 'red'
-    | 'purple'
-    | 'slate'
-    | 'emerald'
-    | 'blue'
-    | 'cyan'
-    | 'amber'
-    | 'rose'
-    | 'indigo'
-    | 'teal'
-    | 'dark';
+  | 'orange'
+  | 'red'
+  | 'purple'
+  | 'slate'
+  | 'emerald'
+  | 'blue'
+  | 'cyan'
+  | 'amber'
+  | 'rose'
+  | 'indigo'
+  | 'teal'
+  | 'dark';
   features: string[];
   suitableFor: string;
   categoryKey?: string;
@@ -266,6 +267,7 @@ function PackageCard({
   pkg: PackageItem;
   onSelectPackage: (name: string) => void;
 }) {
+  const { contact } = useContact();
   const themeGradients: Record<string, string> = {
     orange: 'bg-gradient-to-b from-[#8E3900] to-[#5C2300] text-white',
     red: 'bg-gradient-to-b from-[#9E1414] to-[#610808] text-white',
@@ -285,19 +287,17 @@ function PackageCard({
 
   return (
     <div
-      className={`relative rounded-3xl p-6 sm:p-7 flex flex-col justify-between shadow-xl transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl border-2 ${
-        pkg.isPopular ? 'border-[#FFCD6C] ring-4 ring-orange-500/20' : 'border-white/15'
-      } ${cardBg}`}
+      className={`relative rounded-3xl p-6 sm:p-7 flex flex-col justify-between shadow-xl transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl border-2 ${pkg.isPopular ? 'border-[#FFCD6C] ring-4 ring-orange-500/20' : 'border-white/15'
+        } ${cardBg}`}
     >
       {/* Popular / Tag Ribbon */}
       {pkg.tag && (
         <div className="absolute -top-3.5 right-6">
           <span
-            className={`px-3 py-1 rounded-full text-[11px] font-black tracking-wider uppercase shadow-md flex items-center gap-1 ${
-              pkg.isPopular
-                ? 'bg-[#FF6C28] text-white ring-2 ring-white/40'
-                : 'bg-white/20 backdrop-blur-md text-white border border-white/30'
-            }`}
+            className={`px-3 py-1 rounded-full text-[11px] font-black tracking-wider uppercase shadow-md flex items-center gap-1 ${pkg.isPopular
+              ? 'bg-[#FF6C28] text-white ring-2 ring-white/40'
+              : 'bg-white/20 backdrop-blur-md text-white border border-white/30'
+              }`}
           >
             {pkg.isPopular && <Flame className="w-3 h-3 fill-white" />}
             {pkg.tag}
@@ -367,10 +367,10 @@ function PackageCard({
         </button>
 
         <a
-          href="tel:0819900530"
+          href={`tel:${contact.hotlineTel}`}
           className="block text-center mt-2.5 text-[11px] text-orange-200/80 hover:text-white transition-colors"
         >
-          <span>Hotline: 0819 900 530</span>
+          <span>Hotline: {contact.hotline}</span>
         </a>
       </div>
     </div>
@@ -415,11 +415,6 @@ export default function PackageSection({ onSelectPackage }: PackageSectionProps)
           <h2 className="text-2xl sm:text-4xl font-black text-zinc-900 dark:text-white tracking-tight">
             Chọn Gói Cước Nhà Mạng 3 Miền Phù Hợp Với Bạn
           </h2>
-          <p className="mt-3 text-sm sm:text-base text-zinc-600 dark:text-zinc-400">
-            Tất cả các gói đều được trang bị miễn phí{' '}
-            <span className="font-bold text-[#FF6320]">Modem Wi-Fi 6 2 băng tần</span>, miễn phí lắp
-            đặt khi trả trước từ 6 tháng.
-          </p>
         </div>
 
         {/* Dynamic Categories & Packages */}
@@ -445,8 +440,8 @@ export default function PackageSection({ onSelectPackage }: PackageSectionProps)
             catPackages.length === 4
               ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'
               : catPackages.length <= 2
-              ? 'grid-cols-1 md:grid-cols-2 max-w-3xl mx-auto'
-              : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3';
+                ? 'grid-cols-1 md:grid-cols-2 max-w-3xl mx-auto'
+                : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3';
 
           return (
             <div key={cat.key || catIdx} id={anchorId} className="space-y-6 scroll-mt-24 pt-2">

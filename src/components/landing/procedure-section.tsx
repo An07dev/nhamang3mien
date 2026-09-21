@@ -1,36 +1,45 @@
 'use client';
 
 import { PhoneCall, FileText, CheckCircle2, ShieldAlert, Clock, Headphones, MapPin, Sparkles } from 'lucide-react';
+import { useContact } from '@/context/ContactContext';
 
 interface ProcedureSectionProps {
   onOpenConsult: () => void;
 }
 
-const STEPS = [
-  {
-    step: '01',
-    title: 'Tiếp Nhận & Tư Vấn',
-    desc: 'Điền form đăng ký hoặc gọi Hotline 0819 900 530. Chuyên viên khu vực tư vấn gói cước tối ưu chi phí trong 5 phút.',
-    icon: Headphones,
-    color: 'from-orange-500 to-amber-500',
-  },
-  {
-    step: '02',
-    title: 'Khảo Sát Tuyến Cáp',
-    desc: 'Kỹ thuật viên kiểm tra hạ tầng tủ cáp quang gần nhất, đảm bảo 100% đường truyền sợi quang chuẩn GPON không suy hao.',
-    icon: MapPin,
-    color: 'from-blue-500 to-cyan-500',
-  },
-  {
-    step: '03',
-    title: 'Lắp Đặt & Bàn Giao',
-    desc: 'Thi công gọn gàng thẩm mỹ trong 12h - 36h. Bàn giao Modem Wi-Fi 6 thế hệ mới, nghiệm thu tốc độ đạt chuẩn.',
-    icon: Sparkles,
-    color: 'from-emerald-500 to-teal-500',
-  },
-];
-
 export default function ProcedureSection({ onOpenConsult }: ProcedureSectionProps) {
+  const { contact } = useContact();
+  const steps = [
+    {
+      step: '01',
+      title: 'Tiếp Nhận & Tư Vấn',
+      desc: `Điền form đăng ký hoặc gọi Hotline ${contact.hotline}. Chuyên viên khu vực tư vấn gói cước tối ưu chi phí trong 5 phút.`,
+      icon: Headphones,
+      color: 'from-orange-500 to-amber-500',
+    },
+    {
+      step: '02',
+      title: 'Khảo Sát Tuyến Cáp',
+      desc: 'Kỹ thuật viên kiểm tra hạ tầng tủ cáp quang gần nhất, đảm bảo 100% đường truyền sợi quang chuẩn GPON không suy hao.',
+      icon: MapPin,
+      color: 'from-blue-500 to-cyan-500',
+    },
+    {
+      step: '03',
+      title: 'Ký Hợp Đồng Điện Tử',
+      desc: 'Thủ tục siêu đơn giản chỉ cần CCCD. Ký hợp đồng điện tử tiện lợi, gửi tin nhắn xác nhận chính thức từ tổng đài.',
+      icon: FileText,
+      color: 'from-purple-500 to-indigo-500',
+    },
+    {
+      step: '04',
+      title: 'Lắp Đặt & Bàn Giao',
+      desc: 'Triển khai kéo cáp siêu tốc từ 12h - 36h. Bàn giao thiết bị Wi-Fi 6, đo kiểm tốc độ thực tế tại chỗ đạt chuẩn mới thanh toán.',
+      icon: CheckCircle2,
+      color: 'from-emerald-500 to-teal-500',
+    },
+  ];
+
   return (
     <section id="procedure" className="py-14 sm:py-20 bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 scroll-mt-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
@@ -43,9 +52,9 @@ export default function ProcedureSection({ onOpenConsult }: ProcedureSectionProp
           </h2>
         </div>
 
-        {/* 3 Steps Grid (Balanced for PC & Mobile) */}
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-8 mb-12">
-          {STEPS.map((item, index) => {
+        {/* Steps Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 relative mb-12">
+          {steps.map((item, idx) => {
             const Icon = item.icon;
             return (
               <div
@@ -101,11 +110,11 @@ export default function ProcedureSection({ onOpenConsult }: ProcedureSectionProp
               Đăng Ký Tư Vấn Miễn Phí
             </button>
             <a
-              href="tel:0819900530"
+              href={`tel:${contact.hotlineTel}`}
               className="flex items-center justify-center gap-2 px-5 py-3 rounded-full bg-black/20 hover:bg-black/30 border border-white/30 text-white font-bold text-xs sm:text-sm transition-colors text-center"
             >
               <PhoneCall className="w-4 h-4" />
-              <span>0819 900 530</span>
+              <span>{contact.hotline}</span>
             </a>
           </div>
         </div>

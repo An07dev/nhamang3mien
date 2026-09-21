@@ -36,6 +36,10 @@ import {
   ToggleRight,
   Eye,
   EyeOff,
+  Sliders,
+  PhoneCall,
+  Save,
+  MessageSquare,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -107,7 +111,7 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
   const router = useRouter();
 
   // Top Tabs
-  const [activeTab, setActiveTab] = useState<'leads' | 'packages' | 'categories'>('leads');
+  const [activeTab, setActiveTab] = useState<'leads' | 'packages' | 'categories' | 'settings'>('leads');
 
   // Leads State
   const [leads, setLeads] = useState<LeadItem[]>([]);
@@ -253,6 +257,83 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
       fetchPackagesAndCategories();
     }
   }, [activeTab, fetchPackagesAndCategories]);
+
+  // ==================== SETTINGS (HOTLINE & ZALO) ====================
+  const [settingsHotline, setSettingsHotline] = useState('0819 900 530');
+  const [settingsHotlineTel, setSettingsHotlineTel] = useState('0819900530');
+  const [settingsZaloUrl, setSettingsZaloUrl] = useState('https://zalo.me/0819900530');
+  const [settingsZaloPhone, setSettingsZaloPhone] = useState('0819900530');
+  const [settingsSupportHours, setSettingsSupportHours] = useState('Phục vụ 24/7 (Kể cả Thứ 7, Chủ Nhật & Ngày Lễ)');
+  const [settingsConsultTitle, setSettingsConsultTitle] = useState('Tư Vấn & Lắp Đặt Siêu Tốc Trong 24h');
+  const [isSettingsLoading, setIsSettingsLoading] = useState(false);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [settingsSavedSuccess, setSettingsSavedSuccess] = useState(false);
+
+  const fetchSettings = useCallback(async () => {
+    setIsSettingsLoading(true);
+    try {
+      const res = await fetch('/api/admin/settings');
+      if (res.status === 401) {
+        router.push('/admin/login');
+        return;
+      }
+      const data = await res.json();
+      if (data.success && data.data) {
+        setSettingsHotline(data.data.hotline || '');
+        setSettingsHotlineTel(data.data.hotlineTel || '');
+        setSettingsZaloUrl(data.data.zaloUrl || '');
+        setSettingsZaloPhone(data.data.zaloPhone || '');
+        setSettingsSupportHours(data.data.supportHours || '');
+        setSettingsConsultTitle(data.data.consultTitle || '');
+      }
+    } catch (err) {
+      console.error('Lỗi tải cấu hình:', err);
+    } finally {
+      setIsSettingsLoading(false);
+    }
+  }, [router]);
+
+  useEffect(() => {
+    if (activeTab === 'settings') {
+      fetchSettings();
+    }
+  }, [activeTab, fetchSettings]);
+
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!settingsHotline.trim()) {
+      alert('Vui lòng nhập số Hotline');
+      return;
+    }
+    setIsSavingSettings(true);
+    setSettingsSavedSuccess(false);
+    try {
+      const res = await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hotline: settingsHotline,
+          hotlineTel: settingsHotlineTel,
+          zaloUrl: settingsZaloUrl,
+          zaloPhone: settingsZaloPhone,
+          supportHours: settingsSupportHours,
+          consultTitle: settingsConsultTitle,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSettingsSavedSuccess(true);
+        setTimeout(() => setSettingsSavedSuccess(false), 5000);
+      } else {
+        alert(data.error || 'Lỗi khi lưu cấu hình');
+      }
+    } catch (err) {
+      console.error('Lỗi khi lưu cấu hình:', err);
+      alert('Đã xảy ra lỗi kết nối');
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
 
   // Logout
   const handleLogout = async () => {
@@ -712,6 +793,18 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
           >
             <FolderOpen className="w-4 h-4" />
             <span>Đầu Mục Gói Cước ({categories.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('settings')}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'settings'
+                ? 'bg-gradient-to-r from-[#FF6320] to-[#FFA153] text-white shadow-lg shadow-orange-500/25'
+                : 'bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white'
+            }`}
+          >
+            <Sliders className="w-4 h-4" />
+            <span>Cấu Hình Hotline & Zalo</span>
           </button>
         </div>
       </div>
@@ -1335,6 +1428,246 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
           </div>
         )}
 
+        {/* ============================================================ */}
+        {/* TAB 4: CẤU HÌNH LIÊN HỆ & HOTLINE, ZALO (SETTINGS) */}
+        {/* ============================================================ */}
+        {activeTab === 'settings' && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
+                  <Sliders className="w-6 h-6 text-[#FF6320]" />
+                  <span>Cấu Hình Hotline &amp; Zalo Trực Tuyến</span>
+                </h2>
+                <p className="text-xs sm:text-sm text-zinc-400 mt-1">
+                  Thay đổi số điện thoại tổng đài, số hotline và đường link Zalo tư vấn hiển thị đồng bộ trên toàn bộ website
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={fetchSettings}
+                  disabled={isSettingsLoading}
+                  className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-zinc-300 font-semibold flex items-center gap-2 border border-white/10 transition-colors cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isSettingsLoading ? 'animate-spin' : ''}`} />
+                  <span>Tải lại</span>
+                </button>
+              </div>
+            </div>
+
+            {settingsSavedSuccess && (
+              <div className="p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                <div className="text-xs sm:text-sm font-semibold">
+                  Đã lưu cấu hình thành công! Mọi thay đổi về Hotline và Zalo đã được đồng bộ lên MongoDB và hiển thị trực tiếp trên trang chủ.
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Form Settings (Col span 2) */}
+              <div className="lg:col-span-2 bg-[#141A29] border border-white/10 rounded-3xl p-6 shadow-xl space-y-5">
+                <form onSubmit={handleSaveSettings} className="space-y-5">
+                  {/* Hotline Display & Tel */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-white mb-1.5 flex items-center gap-1.5">
+                        <Phone className="w-3.5 h-3.5 text-[#FF6320]" />
+                        <span>Số điện thoại Hotline hiển thị</span>
+                        <span className="text-[#FF6320]">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={settingsHotline}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setSettingsHotline(val);
+                          const stripped = val.replace(/[^\d+]/g, '');
+                          setSettingsHotlineTel(stripped);
+                        }}
+                        placeholder="Ví dụ: 0819 900 530"
+                        className="w-full h-11 px-3.5 rounded-xl bg-black/40 border border-white/15 text-white font-mono font-bold text-sm focus:outline-none focus:border-[#FF6320] focus:ring-1 focus:ring-[#FF6320]"
+                      />
+                      <span className="text-[11px] text-zinc-400 mt-1 block">
+                        Định dạng hiển thị đẹp mắt trên banner, header, nút gọi (VD: 0819 900 530).
+                      </span>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-white mb-1.5 flex items-center gap-1.5">
+                        <PhoneCall className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Số quay gọi trực tiếp (tel:)</span>
+                        <span className="text-[#FF6320]">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={settingsHotlineTel}
+                        onChange={(e) => setSettingsHotlineTel(e.target.value)}
+                        placeholder="Ví dụ: 0819900530"
+                        className="w-full h-11 px-3.5 rounded-xl bg-black/40 border border-white/15 text-white font-mono font-bold text-sm focus:outline-none focus:border-[#FF6320] focus:ring-1 focus:ring-[#FF6320]"
+                      />
+                      <span className="text-[11px] text-zinc-400 mt-1 block">
+                        Số quay máy tự động khi khách bấm nút gọi trên điện thoại (viết liền không khoảng trắng).
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Zalo Url & Support Hours */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-white mb-1.5 flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <img src="/zalo.svg" alt="Zalo" className="w-3.5 h-3.5 rounded-xs" />
+                          <span>Đường link Zalo tư vấn</span>
+                          <span className="text-[#FF6320]">*</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const clean = settingsHotlineTel.replace(/[^\d+]/g, '');
+                            if (clean) setSettingsZaloUrl(`https://zalo.me/${clean}`);
+                          }}
+                          className="text-[10px] text-blue-400 hover:text-blue-300 underline font-semibold cursor-pointer"
+                        >
+                          Lấy theo Hotline
+                        </button>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={settingsZaloUrl}
+                        onChange={(e) => setSettingsZaloUrl(e.target.value)}
+                        placeholder="Ví dụ: https://zalo.me/0819900530"
+                        className="w-full h-11 px-3.5 rounded-xl bg-black/40 border border-white/15 text-white font-mono text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      />
+                      <span className="text-[11px] text-zinc-400 mt-1 block">
+                        Đường link mở chat Zalo trực tiếp khi khách click (chuẩn: https://zalo.me/số_điện_thoại).
+                      </span>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-white mb-1.5 flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Khung giờ hỗ trợ khách hàng</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={settingsSupportHours}
+                        onChange={(e) => setSettingsSupportHours(e.target.value)}
+                        placeholder="Ví dụ: Phục vụ 24/7 (Kể cả Thứ 7, CN &amp; Lễ)"
+                        className="w-full h-11 px-3.5 rounded-xl bg-black/40 border border-white/15 text-white text-sm focus:outline-none focus:border-[#FF6320]"
+                      />
+                      <span className="text-[11px] text-zinc-400 mt-1 block">
+                        Hiển thị tại Header &amp; Footer để tạo niềm tin cho khách hàng.
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Consult Title */}
+                  <div>
+                    <label className="block text-xs font-bold text-white mb-1.5 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-orange-400" />
+                      <span>Thông điệp cam kết / Tiêu đề tư vấn</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={settingsConsultTitle}
+                      onChange={(e) => setSettingsConsultTitle(e.target.value)}
+                      placeholder="Ví dụ: Tư Vấn &amp; Lắp Đặt Siêu Tốc Trong 24h"
+                      className="w-full h-11 px-3.5 rounded-xl bg-black/40 border border-white/15 text-white text-sm focus:outline-none focus:border-[#FF6320]"
+                    />
+                  </div>
+
+                  {/* Submit Button */}
+                  <div className="pt-3 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div className="text-xs text-zinc-400">
+                      Cấu hình được lưu trực tiếp vào CSDL MongoDB Cloud
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={isSavingSettings}
+                      className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#FF6320] to-[#FFA153] hover:brightness-105 active:scale-[0.99] text-white text-xs sm:text-sm font-bold shadow-lg shadow-orange-500/25 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      <Save className="w-4 h-4" />
+                      <span>{isSavingSettings ? 'Đang lưu cấu hình...' : 'Lưu Cấu Hình Mới'}</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              {/* Live Preview Panel */}
+              <div className="bg-[#141A29] border border-white/10 rounded-3xl p-6 shadow-xl space-y-5">
+                <div className="border-b border-white/10 pb-3">
+                  <span className="text-xs font-bold uppercase tracking-wider text-orange-400 block">
+                    Xem Trước Trực Quan (Live Preview)
+                  </span>
+                  <p className="text-[11px] text-zinc-400 mt-0.5">
+                    Giao diện các nút liên hệ sẽ hiển thị thực tế trên website:
+                  </p>
+                </div>
+
+                {/* 1. Header button preview */}
+                <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-2">
+                  <div className="text-[10px] font-bold text-zinc-400 uppercase">Nút trên thanh Header:</div>
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-[#FF6320] to-[#FFA153] text-white shadow-md font-bold text-xs">
+                    <Phone className="w-3.5 h-3.5 fill-white" />
+                    <div>
+                      <span className="text-[9px] block uppercase text-orange-100 leading-none">Hotline 24/7</span>
+                      <span className="text-xs font-black">{settingsHotline || '0819 900 530'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Floating action buttons preview */}
+                <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+                  <div className="text-[10px] font-bold text-zinc-400 uppercase">Bong bóng nổi (Góc dưới phải):</div>
+                  <div className="flex items-center gap-3 pt-1">
+                    {/* Zalo */}
+                    <a
+                      href={settingsZaloUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-11 h-11 rounded-2xl bg-[#0068FF] shadow-lg flex items-center justify-center p-0.5 hover:scale-105 transition-transform"
+                      title="Click thử link Zalo"
+                    >
+                      <img src="/zalo.svg" alt="Zalo" className="w-full h-full object-cover rounded-xl" />
+                    </a>
+
+                    {/* Phone button */}
+                    <a
+                      href={`tel:${settingsHotlineTel}`}
+                      className="w-12 h-12 rounded-full shadow-lg flex items-center justify-center relative hover:scale-105 transition-transform"
+                      title="Click thử gọi điện"
+                    >
+                      <img src="/phone-icon.png" alt="Phone" className="w-full h-full object-contain rounded-full" />
+                    </a>
+
+                    <div className="text-xs">
+                      <div className="font-bold text-white">Gọi ngay: {settingsHotline}</div>
+                      <div className="text-[11px] text-zinc-400">Click vào icon để test liên kết</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Link check info */}
+                <div className="text-[11px] text-zinc-400 space-y-1.5 p-3 rounded-xl bg-black/30 border border-white/5">
+                  <div className="flex items-center justify-between">
+                    <span>Lệnh quay số:</span>
+                    <code className="text-emerald-400 font-mono">tel:{settingsHotlineTel}</code>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Đích đến Zalo:</span>
+                    <code className="text-blue-400 font-mono truncate max-w-[150px]">{settingsZaloUrl}</code>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* ============================================================ */}

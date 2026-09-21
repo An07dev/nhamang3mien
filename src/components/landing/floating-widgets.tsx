@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { ArrowUp } from 'lucide-react';
+import { useContact } from '@/context/ContactContext';
 
 interface FloatingWidgetsProps {
   onOpenConsult: () => void;
@@ -9,6 +10,7 @@ interface FloatingWidgetsProps {
 
 export default function FloatingWidgets({ onOpenConsult }: FloatingWidgetsProps) {
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const { contact } = useContact();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -56,7 +58,7 @@ export default function FloatingWidgets({ onOpenConsult }: FloatingWidgetsProps)
 
       {/* 3. Official Zalo Chat Bubble */}
       <a
-        href="https://zalo.me/0819900530"
+        href={contact.zaloUrl}
         target="_blank"
         rel="noopener noreferrer"
         className="w-12 h-12 sm:w-13 sm:h-13 rounded-2xl shadow-xl shadow-blue-500/35 flex items-center justify-center hover:scale-110 active:scale-95 transition-all group relative cursor-pointer overflow-hidden border border-white/20 bg-[#0068FF]"
@@ -74,9 +76,9 @@ export default function FloatingWidgets({ onOpenConsult }: FloatingWidgetsProps)
 
       {/* 4. Call Hotline Bubble (Pulsing with exact phone icon) */}
       <a
-        href="tel:0819900530"
+        href={`tel:${contact.hotlineTel}`}
         className="relative w-13 h-13 sm:w-14 sm:h-14 rounded-full shadow-2xl shadow-green-500/40 flex items-center justify-center hover:scale-110 active:scale-95 transition-all group cursor-pointer"
-        aria-label="Gọi ngay hotline 0819 900 530"
+        aria-label={`Gọi ngay hotline ${contact.hotline}`}
       >
         <span className="absolute inset-0 rounded-full bg-[#4ADE80] animate-ping opacity-40 pointer-events-none" />
         <img
@@ -85,7 +87,7 @@ export default function FloatingWidgets({ onOpenConsult }: FloatingWidgetsProps)
           className="w-full h-full object-contain rounded-full relative z-10"
         />
         <span className="hidden sm:block absolute right-16 px-3 py-1.5 rounded-lg bg-zinc-900 text-white text-[11px] font-semibold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-md">
-          Gọi 0819 900 530
+          Gọi {contact.hotline}
         </span>
       </a>
     </div>

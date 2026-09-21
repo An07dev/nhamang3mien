@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { X, CheckCircle2, Loader2, ShieldCheck, Wifi, Phone } from 'lucide-react';
+import { useContact } from '@/context/ContactContext';
 
 interface ConsultModalProps {
   isOpen: boolean;
@@ -10,6 +11,7 @@ interface ConsultModalProps {
 }
 
 export default function ConsultModal({ isOpen, onClose, selectedPackage }: ConsultModalProps) {
+  const { contact } = useContact();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [province, setProvince] = useState('TP. Hồ Chí Minh');
@@ -267,11 +269,11 @@ export default function ConsultModal({ isOpen, onClose, selectedPackage }: Consu
         <div className="px-6 py-3 bg-zinc-50 dark:bg-zinc-800/60 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
           <span>Hỗ trợ trực tiếp qua tổng đài:</span>
           <a
-            href="tel:0819900530"
+            href={`tel:${contact.hotlineTel}`}
             className="font-bold text-[#FF6320] hover:underline flex items-center gap-1"
           >
             <Phone className="w-3.5 h-3.5" />
-            <span>0819 900 530</span>
+            <span>{contact.hotline}</span>
           </a>
         </div>
 

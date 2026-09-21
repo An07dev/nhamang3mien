@@ -12,7 +12,7 @@ import FAQSection from './faq-section';
 import Footer from './footer';
 import ConsultModal from './consult-modal';
 import FloatingWidgets from './floating-widgets';
-import LeadListModal from './lead-list-modal';
+import { ContactProvider } from '@/context/ContactContext';
 
 export default function LandingPageClient() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -28,7 +28,8 @@ export default function LandingPageClient() {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col font-sans selection:bg-[#FF6320] selection:text-white">
+    <ContactProvider>
+      <div className="min-h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col font-sans selection:bg-[#FF6320] selection:text-white">
       {/* 1. Header with Region Dropdown & Hotline */}
       <Header />
 
@@ -65,9 +66,7 @@ export default function LandingPageClient() {
 
       {/* Floating Action Buttons */}
       <FloatingWidgets onOpenConsult={() => handleOpenConsult('Tư vấn nhanh')} />
-
-      {/* MongoDB Leads Inspector */}
-      <LeadListModal />
     </div>
+    </ContactProvider>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Phone, MapPin, ChevronDown, Menu, X, Wifi } from 'lucide-react';
+import { useContact } from '@/context/ContactContext';
 
 const PROVINCES = [
   'TP. Hồ Chí Minh',
@@ -18,6 +19,7 @@ export default function Header() {
   const [selectedProvince, setSelectedProvince] = useState('TP. Hồ Chí Minh');
   const [isProvinceOpen, setIsProvinceOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { contact } = useContact();
 
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-orange-100 shadow-xs">
@@ -108,7 +110,7 @@ export default function Header() {
         {/* Right: Hotline CTA */}
         <div className="flex items-center gap-2 sm:gap-3">
           <a
-            href="tel:0819900530"
+            href={`tel:${contact.hotlineTel}`}
             className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-gradient-to-r from-[#FF6320] to-[#FFA153] text-white shadow-md hover:shadow-orange-500/25 hover:brightness-105 transition-all group font-bold text-xs sm:text-sm"
           >
             <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
@@ -118,7 +120,7 @@ export default function Header() {
               <span className="hidden sm:block text-[9px] uppercase font-semibold text-orange-100 leading-none">
                 Hotline 24/7
               </span>
-              <span className="leading-tight tracking-tight font-black text-xs sm:text-sm whitespace-nowrap">0819 900 530</span>
+              <span className="leading-tight tracking-tight font-black text-xs sm:text-sm whitespace-nowrap">{contact.hotline}</span>
             </div>
           </a>
 
@@ -197,14 +199,14 @@ export default function Header() {
           {/* Quick Hotline in Mobile Menu */}
           <div className="pt-2 border-t border-zinc-100 grid grid-cols-2 gap-2">
             <a
-              href="tel:0819900530"
+              href={`tel:${contact.hotlineTel}`}
               className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-[#FF6320] to-[#FFA153] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm"
             >
               <Phone className="w-3.5 h-3.5" />
-              <span>Gọi 0819 900 530</span>
+              <span>Gọi {contact.hotline}</span>
             </a>
             <a
-              href="https://zalo.me/0819900530"
+              href={contact.zaloUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="py-2.5 px-3 rounded-xl bg-[#0068FF] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm"

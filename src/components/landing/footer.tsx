@@ -1,6 +1,10 @@
+'use client';
+
 import { Phone, Mail, MapPin, ShieldCheck, Wifi } from 'lucide-react';
+import { useContact } from '@/context/ContactContext';
 
 export default function Footer() {
+  const { contact } = useContact();
   return (
     <footer className="bg-zinc-900 text-zinc-300 border-t border-zinc-800 text-xs">
       {/* Top Footer Callout */}
@@ -16,11 +20,11 @@ export default function Footer() {
           </div>
           <div className="flex items-center gap-4">
             <a
-              href="tel:0819900530"
+              href={`tel:${contact.hotlineTel}`}
               className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-[#FF6320] to-[#FFA153] text-white font-extrabold text-sm shadow-md hover:brightness-105 transition-all"
             >
               <Phone className="w-4 h-4 fill-white" />
-              <span>0819 900 530</span>
+              <span>{contact.hotline}</span>
             </a>
           </div>
         </div>
@@ -61,7 +65,7 @@ export default function Footer() {
             </div>
             <div className="flex items-center gap-2">
               <Phone className="w-4 h-4 text-[#FF6320] shrink-0" />
-              <span>Hotline tư vấn lắp đặt: <strong>0819 900 530</strong> (24/7)</span>
+              <span>Hotline tư vấn lắp đặt: <strong>{contact.hotline}</strong> (24/7)</span>
             </div>
             <div className="flex items-center gap-2">
               <Mail className="w-4 h-4 text-[#FF6320] shrink-0" />
@@ -89,7 +93,8 @@ export default function Footer() {
           <ul className="space-y-2 text-zinc-400">
             <li><a href="#procedure" className="hover:text-white transition-colors">Hướng dẫn thủ tục hòa mạng</a></li>
             <li><a href="#faq" className="hover:text-white transition-colors">Câu hỏi thường gặp</a></li>
-            <li><a href="tel:0819900530" className="hover:text-white transition-colors">Tổng đài tiếp nhận: 0819 900 530</a></li>
+            <li><a href={`tel:${contact.hotlineTel}`} className="hover:text-white transition-colors">Tổng đài tiếp nhận: {contact.hotline}</a></li>
+            <li><a href={contact.zaloUrl} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors text-blue-400">Tư vấn Zalo 24/7</a></li>
             <li><a href="#" className="hover:text-white transition-colors">Khảo sát tuyến cáp miễn phí</a></li>
             <li><a href="#" className="hover:text-white transition-colors">Kiểm tra tốc độ Speedtest</a></li>
           </ul>
