@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X, CheckCircle2, Loader2, ShieldCheck, Wifi, Phone } from 'lucide-react';
 import { useContact } from '@/context/ContactContext';
+import { usePackages } from '@/context/PackagesContext';
 
 interface ConsultModalProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface ConsultModalProps {
 
 export default function ConsultModal({ isOpen, onClose, selectedPackage }: ConsultModalProps) {
   const { contact } = useContact();
+  const { packages, categories } = usePackages();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [province, setProvince] = useState('TP. Hồ Chí Minh');
@@ -214,15 +216,32 @@ export default function ConsultModal({ isOpen, onClose, selectedPackage }: Consu
                     onChange={(e) => setPackageInterest(e.target.value)}
                     className="w-full h-11 px-3 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white text-xs focus:outline-none focus:border-[#FF6320]"
                   >
-                    <option value="Gói Giga (300 Mbps)">Gói Giga (300 Mbps)</option>
-                    <option value="Gói Sky (1 Gbps) - Bán chạy">Gói Sky (1 Gbps)</option>
-                    <option value="Gói F-Game (Ultra Fast)">Gói F-Game</option>
-                    <option value="Gói Meta (1 Gbps đối xứng)">Gói Meta (1 Gbps)</option>
-                    <option value="Combo Giga + Truyền hình">Combo Giga + Truyền hình</option>
-                    <option value="Combo Sky + Truyền hình 4K">Combo Sky + TV 4K</option>
-                    <option value="Doanh nghiệp Super 250">Doanh nghiệp Super 250</option>
-                    <option value="Doanh nghiệp Lux 500 (Mesh)">Doanh nghiệp Lux 500</option>
-                    <option value="Tư vấn gói cước phù hợp">Tư vấn gói cước phù hợp</option>
+                    {categories.map((cat) => {
+                      const catPkgs = packages.filter(
+                        (p) => p.categoryKey === cat.key && p.isActive !== false
+                      );
+                      if (catPkgs.length === 0) return null;
+                      return (
+                        <optgroup
+                          key={cat.key}
+                          label={cat.name}
+                          className="font-bold text-orange-600 dark:text-orange-400 bg-white dark:bg-zinc-800"
+                        >
+                          {catPkgs.map((pkg) => (
+                            <option
+                              key={pkg._id || pkg.id || pkg.name}
+                              value={`${pkg.name} (${pkg.speed})`}
+                              className="font-normal text-zinc-900 dark:text-white bg-white dark:bg-zinc-800"
+                            >
+                              {pkg.name} ({pkg.speed}) - {pkg.price}
+                            </option>
+                          ))}
+                        </optgroup>
+                      );
+                    })}
+                    <option value="Tư vấn gói cước phù hợp nhất">
+                      -- Tư vấn gói cước khác theo nhu cầu --
+                    </option>
                   </select>
                 </div>
               </div>

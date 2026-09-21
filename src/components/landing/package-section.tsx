@@ -3,43 +3,9 @@
 import { useState, useEffect } from 'react';
 import { Wifi, Tv, Building2, Check, Flame, Shield, ArrowRight, Phone } from 'lucide-react';
 import { useContact } from '@/context/ContactContext';
+import { usePackages, PackageItem, CategoryItem } from '@/context/PackagesContext';
 
-export interface PackageItem {
-  id?: string;
-  _id?: string;
-  name: string;
-  speed: string;
-  price: string;
-  originalPrice?: string;
-  isPopular?: boolean;
-  tag?: string;
-  theme?:
-  | 'orange'
-  | 'red'
-  | 'purple'
-  | 'slate'
-  | 'emerald'
-  | 'blue'
-  | 'cyan'
-  | 'amber'
-  | 'rose'
-  | 'indigo'
-  | 'teal'
-  | 'dark';
-  features: string[];
-  suitableFor: string;
-  categoryKey?: string;
-  order?: number;
-}
-
-export interface CategoryItem {
-  _id?: string;
-  key: string;
-  name: string;
-  description?: string;
-  icon?: string;
-  order?: number;
-}
+export type { PackageItem, CategoryItem };
 
 interface PackageSectionProps {
   onSelectPackage: (packageName: string) => void;
@@ -344,7 +310,7 @@ function PackageCard({
             Ưu đãi &amp; Quyền lợi:
           </div>
           <ul className="space-y-2.5">
-            {pkg.features.map((feature, idx) => (
+            {(pkg.features || []).map((feature, idx) => (
               <li key={idx} className="flex items-start gap-2.5 text-xs text-zinc-100 leading-snug">
                 <div className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center shrink-0 mt-0.5">
                   <Check className="w-2.5 h-2.5 text-white" />
@@ -378,34 +344,7 @@ function PackageCard({
 }
 
 export default function PackageSection({ onSelectPackage }: PackageSectionProps) {
-  const [categories, setCategories] = useState<CategoryItem[]>(FALLBACK_CATEGORIES);
-  const [packages, setPackages] = useState<PackageItem[]>(FALLBACK_PACKAGES);
-
-  // Load packages and categories dynamically from API
-  useEffect(() => {
-    let isMounted = true;
-    async function loadDynamicPackages() {
-      try {
-        const res = await fetch('/api/packages');
-        if (!res.ok) return;
-        const data = await res.json();
-        if (isMounted && data.success) {
-          if (data.categories && data.categories.length > 0) {
-            setCategories(data.categories);
-          }
-          if (data.packages && data.packages.length > 0) {
-            setPackages(data.packages);
-          }
-        }
-      } catch (err) {
-        console.error('Lỗi tải gói cước từ API:', err);
-      }
-    }
-    loadDynamicPackages();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const { categories, packages } = usePackages();
 
   return (
     <section id="packages" className="py-16 bg-zinc-50 dark:bg-zinc-950 scroll-mt-20">

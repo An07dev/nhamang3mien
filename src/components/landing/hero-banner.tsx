@@ -1,19 +1,32 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Wifi, Gift, Zap, ShieldCheck, CheckCircle2, Loader2, Sparkles, Tv } from 'lucide-react';
+import { usePackages } from '@/context/PackagesContext';
 
 interface HeroBannerProps {
   onOpenModal?: (packageName?: string) => void;
 }
 
 export default function HeroBanner({ onOpenModal }: HeroBannerProps) {
+  const { packages, categories } = usePackages();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [province, setProvince] = useState('TP. Hồ Chí Minh');
-  const [packageInterest, setPackageInterest] = useState('Gói Sky (1 Gbps) - Bán chạy');
+  const [packageInterest, setPackageInterest] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<{ success?: boolean; message?: string; error?: string } | null>(null);
+
+  // Auto select popular or first package
+  useEffect(() => {
+    if (!packageInterest && packages.length > 0) {
+      const popular = packages.find((p) => p.isPopular && p.isActive !== false);
+      const target = popular || packages[0];
+      if (target) {
+        setPackageInterest(`${target.name} (${target.speed})`);
+      }
+    }
+  }, [packages, packageInterest]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -227,12 +240,32 @@ export default function HeroBanner({ onOpenModal }: HeroBannerProps) {
                         onChange={(e) => setPackageInterest(e.target.value)}
                         className="w-full h-11 px-3 rounded-xl bg-black/40 border border-white/20 text-white text-xs focus:outline-none focus:border-[#FF6320]"
                       >
-                        <option value="Gói Giga (300 Mbps)" className="bg-zinc-900">Gói Giga (300 Mbps)</option>
-                        <option value="Gói Sky (1 Gbps) - Bán chạy" className="bg-zinc-900">Gói Sky (1 Gbps)</option>
-                        <option value="Gói Meta (1 Gbps đối xứng)" className="bg-zinc-900">Gói Meta (1 Gbps)</option>
-                        <option value="Gói F-Game (Siêu tốc chơi game)" className="bg-zinc-900">Gói F-Game</option>
-                        <option value="Combo Sky + Truyền hình 4K" className="bg-zinc-900">Combo TV Ngoại Hạng Anh</option>
-                        <option value="Doanh nghiệp Lux 500" className="bg-zinc-900">Doanh nghiệp Lux 500</option>
+                        {categories.map((cat) => {
+                          const catPkgs = packages.filter(
+                            (p) => p.categoryKey === cat.key && p.isActive !== false
+                          );
+                          if (catPkgs.length === 0) return null;
+                          return (
+                            <optgroup
+                              key={cat.key}
+                              label={cat.name}
+                              className="bg-zinc-900 text-orange-400 font-bold"
+                            >
+                              {catPkgs.map((pkg) => (
+                                <option
+                                  key={pkg._id || pkg.id || pkg.name}
+                                  value={`${pkg.name} (${pkg.speed})`}
+                                  className="bg-zinc-900 text-white font-normal"
+                                >
+                                  {pkg.name} ({pkg.speed}) - {pkg.price}
+                                </option>
+                              ))}
+                            </optgroup>
+                          );
+                        })}
+                        <option value="Tư vấn gói cước phù hợp" className="bg-zinc-900 text-zinc-300">
+                          -- Tư vấn gói cước khác --
+                        </option>
                       </select>
                     </div>
                   </div>
