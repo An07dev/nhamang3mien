@@ -40,21 +40,22 @@ export default function FloatingWidgets({ onOpenConsult }: FloatingWidgetsProps)
         </button>
       )}
 
-      {/* 2. Quick Consultation Form Bubble */}
-      <button
-        onClick={onOpenConsult}
-        className="w-12 h-12 sm:w-13 sm:h-13 rounded-full bg-white shadow-xl shadow-orange-500/30 flex items-center justify-center hover:scale-110 active:scale-95 transition-all cursor-pointer group relative border-2 border-[#FF6320] p-1.5"
-        aria-label="Đăng ký tư vấn"
+      {/* 2. Call Hotline Bubble (Liên hệ gọi ngay) */}
+      <a
+        href={`tel:${contact.hotlineTel}`}
+        className="relative w-13 h-13 sm:w-14 sm:h-14 rounded-full shadow-2xl shadow-green-500/40 flex items-center justify-center hover:scale-110 active:scale-95 transition-all group cursor-pointer"
+        aria-label={`Gọi ngay hotline ${contact.hotline}`}
       >
+        <span className="absolute inset-0 rounded-full bg-[#4ADE80] animate-ping opacity-40 pointer-events-none" />
         <img
-          src="/consult-icon.png"
-          alt="Tư vấn"
-          className="w-full h-full object-contain"
+          src="/phone-icon.png"
+          alt="Gọi hotline liên hệ"
+          className="w-full h-full object-contain rounded-full relative z-10"
         />
-        <span className="hidden sm:block absolute right-15 px-2.5 py-1 rounded-lg bg-zinc-900 text-white text-[11px] font-semibold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-md">
-          Đăng ký tư vấn
+        <span className="hidden sm:block absolute right-16 px-3 py-1.5 rounded-lg bg-zinc-900 text-white text-[11px] font-semibold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-md">
+          Gọi {contact.hotline}
         </span>
-      </button>
+      </a>
 
       {/* 3. Official Zalo Chat Bubble */}
       <a
@@ -74,22 +75,21 @@ export default function FloatingWidgets({ onOpenConsult }: FloatingWidgetsProps)
         </span>
       </a>
 
-      {/* 4. Call Hotline Bubble (Pulsing with exact phone icon) */}
-      <a
-        href={`tel:${contact.hotlineTel}`}
-        className="relative w-13 h-13 sm:w-14 sm:h-14 rounded-full shadow-2xl shadow-green-500/40 flex items-center justify-center hover:scale-110 active:scale-95 transition-all group cursor-pointer"
-        aria-label={`Gọi ngay hotline ${contact.hotline}`}
+      {/* 4. Quick Consultation Form Bubble (Tư vấn khách hàng) */}
+      <button
+        onClick={onOpenConsult}
+        className="w-12 h-12 sm:w-13 sm:h-13 rounded-full bg-white shadow-xl shadow-orange-500/30 flex items-center justify-center hover:scale-110 active:scale-95 transition-all cursor-pointer group relative border-2 border-[#FF6320] p-1.5"
+        aria-label="Đăng ký tư vấn khách hàng"
       >
-        <span className="absolute inset-0 rounded-full bg-[#4ADE80] animate-ping opacity-40 pointer-events-none" />
         <img
-          src="/phone-icon.png"
-          alt="Gọi hotline"
-          className="w-full h-full object-contain rounded-full relative z-10"
+          src="/consult-icon.png"
+          alt="Tư vấn khách hàng"
+          className="w-full h-full object-contain"
         />
-        <span className="hidden sm:block absolute right-16 px-3 py-1.5 rounded-lg bg-zinc-900 text-white text-[11px] font-semibold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-md">
-          Gọi {contact.hotline}
+        <span className="hidden sm:block absolute right-15 px-2.5 py-1 rounded-lg bg-zinc-900 text-white text-[11px] font-semibold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-md">
+          Đăng ký tư vấn
         </span>
-      </a>
+      </button>
     </div>
   );
 }

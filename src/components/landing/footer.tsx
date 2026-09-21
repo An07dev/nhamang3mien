@@ -32,7 +32,7 @@ export default function Footer() {
 
       {/* Main Footer Links */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
-        
+
         {/* Company Legal Info */}
         <div className="lg:col-span-2 space-y-3">
           <div className="flex items-center gap-3 mb-2">
@@ -109,14 +109,6 @@ export default function Footer() {
             <li><a href="#" className="hover:text-white transition-colors">Chính sách bảo mật thông tin</a></li>
             <li><a href="#" className="hover:text-white transition-colors">Quy định và điều khoản</a></li>
             <li><a href="#" className="hover:text-white transition-colors">Liên hệ đại lý 3 miền</a></li>
-            <li className="pt-1">
-              <a
-                href="/admin"
-                className="text-orange-400 hover:text-[#FFA153] transition-colors flex items-center gap-1.5 font-semibold text-xs"
-              >
-                <span>🛡️ Cổng Quản Trị (Admin)</span>
-              </a>
-            </li>
           </ul>
         </div>
 

@@ -39,7 +39,7 @@ const REVIEWS: ReviewItem[] = [
     role: 'Chủ Homestay & Cafe Biển',
     location: 'Đường Võ Nguyên Giáp, Đà Nẵng',
     region: 'Trung',
-    packageName: 'Gói Lux 500 Mesh Wi-Fi 6',
+    packageName: 'Gói Lux 500 Mesh',
     rating: 5,
     comment:
       'Quán cafe kết hợp homestay của mình thường xuyên có 50 - 70 khách ngồi làm việc từ xa. Trước đây dùng mạng cũ hay bị nghẽn giờ cao điểm, từ khi chuyển sang gói Lux 500 của FPT 3 Miền thì khách khen nức nở. Sóng phủ kín 3 tầng không cần đổi mạng.',
@@ -50,9 +50,9 @@ const REVIEWS: ReviewItem[] = [
     id: '3',
     name: 'Trần Minh Quân',
     role: 'Streamer & Sáng tạo nội dung',
-    location: 'Khu đô thị Phú Mỹ Hưng, Quận 7, TP.HCM',
+    location: 'Quận 7, TP.HCM',
     region: 'Nam',
-    packageName: 'Gói Meta (1 Gbps) + Combo Truyền Hình',
+    packageName: 'Gói Meta (1 Gbps)',
     rating: 5,
     comment:
       'Gói Meta tốc độ Upload 1 Gbps tải video 4K lên YouTube và livestream chỉ mất vài chục giây. Bố mẹ mình ở nhà thì mê tít xem giải Ngoại Hạng Anh trên đầu thu điều khiển giọng nói, chuyển kênh cực nhanh và hình ảnh sắc nét.',
@@ -65,7 +65,7 @@ const REVIEWS: ReviewItem[] = [
     role: 'Chủ Doanh nghiệp Thủy Sản',
     location: 'Quận Ninh Kiều, Cần Thơ',
     region: 'Nam',
-    packageName: 'Gói Doanh Nghiệp Super 250',
+    packageName: 'Gói Doanh Nghiệp',
     rating: 5,
     comment:
       'Tôi đăng ký online qua website lúc 9h sáng, đến 2h chiều kỹ thuật viên đã có mặt kéo cáp hoàn thiện và bàn giao mật khẩu modem. Thủ tục rất nhanh chỉ cần chụp ảnh CCCD, được miễn toàn bộ tiền cọc khi thanh toán trước.',
