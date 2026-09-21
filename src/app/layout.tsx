@@ -16,8 +16,14 @@ export const metadata: Metadata = {
   title: "FPT 3 Miền - Lắp Wifi Tốc Độ Cao Toàn Quốc",
   description: "Lắp đặt mạng Wifi Internet cáp quang toàn quốc. Uy tín - Tận tâm - Nhiệt tình.",
   icons: {
-    icon: "/logo.png",
-    apple: "/logo.png",
+    icon: [
+      { url: "/logo.png", type: "image/png" },
+      { url: "/favicon.ico" },
+    ],
+    shortcut: ["/logo.png"],
+    apple: [
+      { url: "/logo.png", type: "image/png" },
+    ],
   },
 };
 
