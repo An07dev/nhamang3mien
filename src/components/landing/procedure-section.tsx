@@ -26,13 +26,6 @@ export default function ProcedureSection({ onOpenConsult }: ProcedureSectionProp
     },
     {
       step: '03',
-      title: 'Ký Hợp Đồng Điện Tử',
-      desc: 'Thủ tục siêu đơn giản chỉ cần CCCD. Ký hợp đồng điện tử tiện lợi, gửi tin nhắn xác nhận chính thức từ tổng đài.',
-      icon: FileText,
-      color: 'from-purple-500 to-indigo-500',
-    },
-    {
-      step: '04',
       title: 'Lắp Đặt & Bàn Giao',
       desc: 'Triển khai kéo cáp siêu tốc từ 12h - 36h. Bàn giao thiết bị Wi-Fi 6, đo kiểm tốc độ thực tế tại chỗ đạt chuẩn mới thanh toán.',
       icon: CheckCircle2,
@@ -52,8 +45,8 @@ export default function ProcedureSection({ onOpenConsult }: ProcedureSectionProp
           </h2>
         </div>
 
-        {/* Steps Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 relative mb-12">
+        {/* Steps Grid (3 Columns) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 relative mb-12">
           {steps.map((item, idx) => {
             const Icon = item.icon;
             return (
