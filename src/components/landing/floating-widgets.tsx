@@ -43,6 +43,11 @@ export default function FloatingWidgets({ onOpenConsult }: FloatingWidgetsProps)
       {/* 2. Call Hotline Bubble (Liên hệ gọi ngay) */}
       <a
         href={`tel:${contact.hotlineTel}`}
+        onClick={() => {
+          import('@/lib/meta-pixel').then((m) =>
+            m.trackPixel('Contact', { method: 'hotline_floating', phone: contact.hotlineTel })
+          );
+        }}
         className="relative w-13 h-13 sm:w-14 sm:h-14 rounded-full shadow-2xl shadow-green-500/40 flex items-center justify-center hover:scale-110 active:scale-95 transition-all group cursor-pointer"
         aria-label={`Gọi ngay hotline ${contact.hotline}`}
       >
@@ -62,6 +67,11 @@ export default function FloatingWidgets({ onOpenConsult }: FloatingWidgetsProps)
         href={contact.zaloUrl}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={() => {
+          import('@/lib/meta-pixel').then((m) =>
+            m.trackPixel('Contact', { method: 'zalo_floating', url: contact.zaloUrl })
+          );
+        }}
         className="w-12 h-12 sm:w-13 sm:h-13 rounded-2xl shadow-xl shadow-blue-500/35 flex items-center justify-center hover:scale-110 active:scale-95 transition-all group relative cursor-pointer overflow-hidden border border-white/20 bg-[#0068FF]"
         aria-label="Chat Zalo hỗ trợ"
       >

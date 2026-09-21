@@ -1,5 +1,13 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
+export interface ICapiEventLog {
+  eventName: string;
+  eventId?: string;
+  sentAt: Date;
+  success: boolean;
+  response?: string;
+}
+
 export interface ILead extends Document {
   name: string;
   phone: string;
@@ -8,6 +16,14 @@ export interface ILead extends Document {
   note?: string;
   source?: string;
   status: 'pending' | 'contacted' | 'completed';
+  capiEvents?: ICapiEventLog[];
+  clientMetadata?: {
+    clientIp?: string;
+    userAgent?: string;
+    fbp?: string;
+    fbc?: string;
+    lastEventId?: string;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -49,12 +65,33 @@ const LeadSchema = new Schema<ILead>(
       enum: ['pending', 'contacted', 'completed'],
       default: 'pending',
     },
+    capiEvents: [
+      {
+        eventName: { type: String, required: true },
+        eventId: { type: String },
+        sentAt: { type: Date, default: Date.now },
+        success: { type: Boolean, default: false },
+        response: { type: String },
+      },
+    ],
+    clientMetadata: {
+      clientIp: { type: String },
+      userAgent: { type: String },
+      fbp: { type: String },
+      fbc: { type: String },
+      lastEventId: { type: String },
+    },
   },
   {
     timestamps: true,
   }
 );
 
-const Lead: Model<ILead> = mongoose.models.Lead || mongoose.model<ILead>('Lead', LeadSchema);
+if (mongoose.models && mongoose.models.Lead) {
+  delete (mongoose.models as any).Lead;
+}
+
+const Lead: Model<ILead> =
+  mongoose.models?.Lead || mongoose.model<ILead>('Lead', LeadSchema);
 
 export default Lead;

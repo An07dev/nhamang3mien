@@ -12,6 +12,9 @@ export async function POST(request: NextRequest) {
       packageInterest?: string;
       note?: string;
       source?: string;
+      eventId?: string;
+      fbp?: string;
+      fbc?: string;
     } = {};
 
     const contentType = request.headers.get('content-type') || '';
@@ -26,12 +29,29 @@ export async function POST(request: NextRequest) {
         packageInterest: formData.get('packageInterest') as string,
         note: formData.get('note') as string,
         source: formData.get('source') as string,
+        eventId: formData.get('eventId') as string,
+        fbp: formData.get('fbp') as string,
+        fbc: formData.get('fbc') as string,
       };
     } else {
       body = await request.json().catch(() => ({}));
     }
 
     const { name, phone, province, packageInterest, note, source } = body;
+
+    // Trích xuất metadata trình duyệt của khách hàng
+    const forwardedFor = request.headers.get('x-forwarded-for');
+    const clientIp = forwardedFor
+      ? forwardedFor.split(',')[0].trim()
+      : (request.headers.get('x-real-ip') || '127.0.0.1');
+    const userAgent = request.headers.get('user-agent') || '';
+    const cookieFbp = request.cookies.get('_fbp')?.value || '';
+    const cookieFbc = request.cookies.get('_fbc')?.value || '';
+
+    const finalFbp = body.fbp || cookieFbp;
+    const finalFbc = body.fbc || cookieFbc;
+    const finalEventId =
+      body.eventId || `lead_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
     // 1. Kiểm tra họ và tên
     if (!name || typeof name !== 'string' || name.trim().length < 2) {
@@ -79,9 +99,63 @@ export async function POST(request: NextRequest) {
       note: (note && note.trim()) || '',
       source: (source && source.trim()) || 'Đăng Ký Liền Tay (Hero Banner)',
       status: 'pending',
+      clientMetadata: {
+        clientIp,
+        userAgent,
+        fbp: finalFbp,
+        fbc: finalFbc,
+        lastEventId: finalEventId,
+      },
     });
 
-    // 5. Trả về kết quả thành công
+    // 5. Kích hoạt Meta Conversions API (CAPI) cho sự kiện Lead (không chặn luồng nếu Meta lỗi)
+    let capiStatus = { sent: false, error: '' };
+    try {
+      const { sendMetaCapiEvent } = await import('@/lib/meta-capi');
+      const capiRes = await sendMetaCapiEvent({
+        eventName: 'Lead',
+        eventId: finalEventId,
+        eventSourceUrl: request.headers.get('referer') || 'https://fpt3mien.com/',
+        userData: {
+          phone: cleanPhone,
+          name: name.trim(),
+          clientIp,
+          userAgent,
+          fbp: finalFbp,
+          fbc: finalFbc,
+        },
+        customData: {
+          content_name: newLead.packageInterest,
+          lead_id: newLead._id.toString(),
+          status: 'pending',
+        },
+      });
+
+      if (!capiRes.skipped) {
+        capiStatus = {
+          sent: capiRes.success,
+          error: capiRes.error || '',
+        };
+
+        await Lead.findByIdAndUpdate(newLead._id, {
+          $push: {
+            capiEvents: {
+              eventName: 'Lead',
+              eventId: finalEventId,
+              sentAt: new Date(),
+              success: capiRes.success,
+              response: capiRes.success
+                ? `Thành công (Events: ${capiRes.eventsReceived})`
+                : (capiRes.error || 'Thất bại'),
+            },
+          },
+        });
+      }
+    } catch (capiErr: any) {
+      console.warn('[CAPI Trigger Error]:', capiErr?.message);
+    }
+
+    // 6. Trả về kết quả thành công
     return NextResponse.json(
       {
         success: true,
@@ -94,6 +168,8 @@ export async function POST(request: NextRequest) {
           packageInterest: newLead.packageInterest,
           source: newLead.source,
           status: newLead.status,
+          eventId: finalEventId,
+          capi: capiStatus,
           createdAt: newLead.createdAt,
         },
       },

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Wifi, Gift, Zap, ShieldCheck, CheckCircle2, Loader2, Sparkles, Tv } from 'lucide-react';
 import { usePackages } from '@/context/PackagesContext';
+import { trackPixel, generateEventId, getFbp, getFbc } from '@/lib/meta-pixel';
 
 interface HeroBannerProps {
   onOpenModal?: (packageName?: string) => void;
@@ -33,6 +34,22 @@ export default function HeroBanner({ onOpenModal }: HeroBannerProps) {
     setResult(null);
     setIsLoading(true);
 
+    // Tạo Event ID cho Deduplication giữa Pixel & CAPI
+    const eventId = generateEventId('lead');
+    const fbp = getFbp();
+    const fbc = getFbc();
+
+    // 1. Kích hoạt Pixel Client-side
+    trackPixel(
+      'Lead',
+      {
+        content_name: packageInterest,
+        content_category: province,
+        currency: 'VND',
+      },
+      { eventID: eventId }
+    );
+
     try {
       const response = await fetch('/api/dang-ky', {
         method: 'POST',
@@ -45,6 +62,9 @@ export default function HeroBanner({ onOpenModal }: HeroBannerProps) {
           province,
           packageInterest,
           source: 'Đăng Ký Liền Tay (Hero Banner)',
+          eventId,
+          fbp,
+          fbc,
         }),
       });
 

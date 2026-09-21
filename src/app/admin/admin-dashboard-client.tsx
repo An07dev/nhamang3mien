@@ -40,6 +40,8 @@ import {
   PhoneCall,
   Save,
   MessageSquare,
+  Zap,
+  AlertCircle,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -52,6 +54,19 @@ export interface LeadItem {
   source?: string;
   note?: string;
   status: 'pending' | 'contacted' | 'completed';
+  capiEvents?: Array<{
+    eventName: string;
+    eventId?: string;
+    sentAt: string;
+    success: boolean;
+    response?: string;
+  }>;
+  clientMetadata?: {
+    clientIp?: string;
+    userAgent?: string;
+    fbp?: string;
+    fbc?: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -293,11 +308,117 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
     }
   }, [router]);
 
+  // ==================== TRACKING SETTINGS (META PIXEL & CAPI) ====================
+  const [trackingPixelId, setTrackingPixelId] = useState('');
+  const [trackingCapiToken, setTrackingCapiToken] = useState('');
+  const [trackingTestEventCode, setTrackingTestEventCode] = useState('');
+  const [trackingIsEnabled, setTrackingIsEnabled] = useState(false);
+  const [showCapiToken, setShowCapiToken] = useState(false);
+  const [isTrackingLoading, setIsTrackingLoading] = useState(false);
+  const [isSavingTracking, setIsSavingTracking] = useState(false);
+  const [trackingSavedSuccess, setTrackingSavedSuccess] = useState(false);
+  const [isTestingCapi, setIsTestingCapi] = useState(false);
+  const [testCapiResult, setTestCapiResult] = useState<{
+    success: boolean;
+    message: string;
+    details?: any;
+  } | null>(null);
+
+  const fetchTrackingSettings = useCallback(async () => {
+    setIsTrackingLoading(true);
+    try {
+      const res = await fetch('/api/admin/tracking');
+      if (res.status === 401) {
+        router.push('/admin/login');
+        return;
+      }
+      const data = await res.json();
+      if (data.success && data.data) {
+        setTrackingPixelId(data.data.pixelId || '');
+        setTrackingCapiToken(data.data.capiToken || '');
+        setTrackingTestEventCode(data.data.testEventCode || '');
+        setTrackingIsEnabled(Boolean(data.data.isEnabled));
+      }
+    } catch (err) {
+      console.error('Lỗi tải cấu hình tracking:', err);
+    } finally {
+      setIsTrackingLoading(false);
+    }
+  }, [router]);
+
   useEffect(() => {
     if (activeTab === 'settings') {
       fetchSettings();
+      fetchTrackingSettings();
     }
-  }, [activeTab, fetchSettings]);
+  }, [activeTab, fetchSettings, fetchTrackingSettings]);
+
+  const handleSaveTrackingSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingTracking(true);
+    setTrackingSavedSuccess(false);
+    try {
+      const res = await fetch('/api/admin/tracking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pixelId: trackingPixelId,
+          capiToken: trackingCapiToken,
+          testEventCode: trackingTestEventCode,
+          isEnabled: trackingIsEnabled,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTrackingSavedSuccess(true);
+        setTimeout(() => setTrackingSavedSuccess(false), 5000);
+      } else {
+        alert(data.error || 'Lỗi khi lưu cấu hình tracking');
+      }
+    } catch (err) {
+      console.error('Lỗi khi lưu cấu hình tracking:', err);
+      alert('Đã xảy ra lỗi kết nối');
+    } finally {
+      setIsSavingTracking(false);
+    }
+  };
+
+  const handleTestCapi = async () => {
+    if (!trackingPixelId.trim()) {
+      alert('Vui lòng nhập Pixel ID trước khi test');
+      return;
+    }
+    if (!trackingCapiToken.trim()) {
+      alert('Vui lòng nhập CAPI Access Token trước khi test');
+      return;
+    }
+    setIsTestingCapi(true);
+    setTestCapiResult(null);
+    try {
+      const res = await fetch('/api/admin/tracking/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pixelId: trackingPixelId,
+          capiToken: trackingCapiToken,
+          testEventCode: trackingTestEventCode,
+        }),
+      });
+      const data = await res.json();
+      setTestCapiResult({
+        success: data.success,
+        message: data.message || data.error || 'Kết quả kiểm tra CAPI',
+        details: data.data || data.details,
+      });
+    } catch (err: any) {
+      setTestCapiResult({
+        success: false,
+        message: err.message || 'Lỗi kết nối khi test CAPI',
+      });
+    } finally {
+      setIsTestingCapi(false);
+    }
+  };
 
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -989,6 +1110,7 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
                       <th className="py-3 px-4">Số Điện Thoại</th>
                       <th className="py-3 px-4">Khu Vực &amp; Gói Cước</th>
                       <th className="py-3 px-4">Nguồn</th>
+                      <th className="py-3 px-4">Meta CAPI</th>
                       <th className="py-3 px-4">Trạng Thái Xử Lý</th>
                       <th className="py-3 px-4 text-right">Thao Tác</th>
                     </tr>
@@ -996,7 +1118,7 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
                   <tbody className="divide-y divide-white/5">
                     {leads.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="py-12 text-center text-zinc-400">
+                        <td colSpan={8} className="py-12 text-center text-zinc-400">
                           <div className="max-w-xs mx-auto space-y-2">
                             <Users className="w-10 h-10 text-zinc-600 mx-auto" />
                             <p className="font-semibold text-zinc-300">Không tìm thấy khách hàng nào</p>
@@ -1068,6 +1190,24 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
                               <span className="text-[11px] font-semibold text-zinc-400 bg-white/5 px-2 py-1 rounded-md">
                                 {item.source || 'Website'}
                               </span>
+                            </td>
+                            <td className="py-3.5 px-4">
+                              {item.capiEvents && item.capiEvents.length > 0 ? (
+                                <div className="flex flex-col gap-0.5">
+                                  <span
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 whitespace-nowrap"
+                                    title={item.capiEvents.map((e) => `${e.eventName}: ${e.response || (e.success ? 'OK' : 'Lỗi')}`).join('\n')}
+                                  >
+                                    <Zap className="w-3 h-3 text-emerald-400" />
+                                    <span>{item.capiEvents[item.capiEvents.length - 1].eventName}</span>
+                                  </span>
+                                  <span className="text-[10px] text-zinc-500 font-mono">
+                                    {item.capiEvents.length} event(s)
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-zinc-600 text-xs font-mono">-</span>
+                              )}
                             </td>
                             <td className="py-3.5 px-4">
                               {item.status === 'pending' && (
@@ -1143,9 +1283,16 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
                           {item.province || 'Toàn quốc'} &bull; {new Date(item.createdAt).toLocaleDateString('vi-VN')}
                         </div>
                       </div>
-                      <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[11px] font-bold">
-                        {item.status}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        {item.capiEvents && item.capiEvents.length > 0 && (
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold flex items-center gap-1">
+                            <Zap className="w-2.5 h-2.5" /> CAPI
+                          </span>
+                        )}
+                        <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[11px] font-bold">
+                          {item.status}
+                        </span>
+                      </div>
                     </div>
                     <div className="flex items-center justify-between bg-black/30 p-2.5 rounded-xl border border-white/5">
                       <div className="text-xs font-bold text-[#FFA153]">{item.packageInterest}</div>
@@ -1666,6 +1813,207 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
                 </div>
               </div>
             </div>
+
+            {/* ============================================================ */}
+            {/* CARD 2: CẤU HÌNH META PIXEL & CONVERSIONS API (CAPI) */}
+            {/* ============================================================ */}
+            <div className="bg-[#141A29] border border-white/10 rounded-3xl p-6 shadow-xl space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center shrink-0 mt-0.5">
+                    <Zap className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                      <span>Cấu Hình Meta Pixel &amp; Conversions API (CAPI)</span>
+                      <span className="text-[10px] uppercase px-2 py-0.5 rounded-full font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                        Facebook Ads 2026
+                      </span>
+                    </h3>
+                    <p className="text-xs text-zinc-400 mt-1">
+                      Đo lường chuyển đổi kép (Client Pixel + Server CAPI) tối ưu hóa chi phí quảng cáo Facebook Ads, theo dõi vòng đời khách hàng và chống trùng lặp (Deduplication).
+                    </p>
+                  </div>
+                </div>
+
+                {/* Tracking Enabled Switch */}
+                <label className="flex items-center gap-2.5 p-2.5 rounded-2xl bg-black/40 border border-white/10 cursor-pointer self-start sm:self-auto hover:bg-black/60 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={trackingIsEnabled}
+                    onChange={(e) => setTrackingIsEnabled(e.target.checked)}
+                    className="w-5 h-5 rounded accent-blue-500 cursor-pointer"
+                  />
+                  <div className="text-xs">
+                    <div className={`font-bold ${trackingIsEnabled ? 'text-emerald-400' : 'text-zinc-400'}`}>
+                      {trackingIsEnabled ? 'Đang Kích Hoạt' : 'Đang Tắt Tracking'}
+                    </div>
+                    <div className="text-[10px] text-zinc-500">Pixel &amp; CAPI</div>
+                  </div>
+                </label>
+              </div>
+
+              {trackingSavedSuccess && (
+                <div className="p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 flex items-center gap-3 animate-in fade-in">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                  <div className="text-xs sm:text-sm font-semibold">
+                    Đã lưu cấu hình Meta Pixel &amp; CAPI thành công! Hệ thống sẵn sàng ghi nhận chuyển đổi.
+                  </div>
+                </div>
+              )}
+
+              {testCapiResult && (
+                <div
+                  className={`p-4 rounded-2xl border flex items-start gap-3 animate-in fade-in ${
+                    testCapiResult.success
+                      ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                      : 'bg-red-500/15 border-red-500/40 text-red-300'
+                  }`}
+                >
+                  {testCapiResult.success ? (
+                    <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                  )}
+                  <div className="text-xs space-y-1">
+                    <div className="font-bold">{testCapiResult.message}</div>
+                    {testCapiResult.details && (
+                      <pre className="text-[11px] font-mono bg-black/40 p-2 rounded-lg mt-1 overflow-x-auto">
+                        {JSON.stringify(testCapiResult.details, null, 2)}
+                      </pre>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <form onSubmit={handleSaveTrackingSettings} className="space-y-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {/* Pixel ID */}
+                  <div>
+                    <label className="block text-xs font-bold text-white mb-1.5 flex items-center justify-between">
+                      <span>Meta Pixel ID (Dataset ID)</span>
+                      <span className="text-zinc-500 font-normal text-[11px]">Bắt buộc để gắn Pixel</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={trackingPixelId}
+                      onChange={(e) => setTrackingPixelId(e.target.value)}
+                      placeholder="Ví dụ: 1234567890123456"
+                      className="w-full h-11 px-3.5 rounded-xl bg-black/40 border border-white/15 text-white font-mono text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    />
+                    <span className="text-[11px] text-zinc-400 mt-1 block">
+                      Lấy tại: Meta Events Manager (Trình quản lý sự kiện) &gt; Cài đặt &gt; ID Tập dữ liệu / Pixel ID.
+                    </span>
+                  </div>
+
+                  {/* Test Event Code */}
+                  <div>
+                    <label className="block text-xs font-bold text-white mb-1.5 flex items-center justify-between">
+                      <span>Mã Thử Nghiệm Sự Kiện (Test Event Code)</span>
+                      <span className="text-amber-400 font-normal text-[11px]">Tùy chọn (để test live)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={trackingTestEventCode}
+                      onChange={(e) => setTrackingTestEventCode(e.target.value)}
+                      placeholder="Ví dụ: TEST12345"
+                      className="w-full h-11 px-3.5 rounded-xl bg-black/40 border border-white/15 text-white font-mono text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                    />
+                    <span className="text-[11px] text-zinc-400 mt-1 block">
+                      Lấy tại tab <strong>Thử nghiệm sự kiện</strong> trên Meta Events Manager. Nhập mã này để thấy sự kiện xuất hiện tức thời trên màn hình test của Facebook.
+                    </span>
+                  </div>
+                </div>
+
+                {/* CAPI Access Token */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-bold text-white">
+                      Meta CAPI Access Token (Mã truy cập API chuyển đổi)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowCapiToken(!showCapiToken)}
+                      className="text-[11px] text-blue-400 hover:text-blue-300 flex items-center gap-1 cursor-pointer"
+                    >
+                      {showCapiToken ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      <span>{showCapiToken ? 'Ẩn token' : 'Hiện token'}</span>
+                    </button>
+                  </div>
+                  <textarea
+                    rows={2}
+                    value={trackingCapiToken}
+                    onChange={(e) => setTrackingCapiToken(e.target.value)}
+                    placeholder="Dán token bắt đầu bằng EAAG... (Tạo tại Trình quản lý sự kiện > Cài đặt > API chuyển đổi > Tạo mã truy cập)"
+                    className="w-full p-3 rounded-xl bg-black/40 border border-white/15 text-white font-mono text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                  <span className="text-[11px] text-zinc-400 mt-1 block">
+                    Token này được bảo mật an toàn trên máy chủ và chỉ dùng để bắn Server CAPI, không bao giờ lộ ra ngoài trình duyệt khách hàng.
+                  </span>
+                </div>
+
+                {/* Workflow Explainer Banner */}
+                <div className="p-4 rounded-2xl bg-black/30 border border-white/5 space-y-2.5">
+                  <div className="text-xs font-bold text-white flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-[#FFA153]" />
+                    <span>Cơ Chế Theo Dõi Trạng Thái Khách Hàng Tự Động (Customer Lifecycle CAPI):</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-[11px]">
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-1">
+                      <div className="font-bold text-amber-400 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-amber-400" />
+                        <span>1. Khách Gửi Đơn</span>
+                      </div>
+                      <p className="text-zinc-300">
+                        Bắn đồng thời Pixel &amp; CAPI sự kiện <strong>Lead</strong> kèm mã <code>event_id</code> chống trùng lặp.
+                      </p>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-1">
+                      <div className="font-bold text-blue-400 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-blue-400" />
+                        <span>2. Admin Gọi Tư Vấn</span>
+                      </div>
+                      <p className="text-zinc-300">
+                        Đổi trạng thái sang <em>&quot;Đã gọi&quot;</em> -&gt; Server tự động bắn CAPI sự kiện <strong>Contact</strong>.
+                      </p>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-1">
+                      <div className="font-bold text-emerald-400 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                        <span>3. Lắp Đặt Hoàn Tất</span>
+                      </div>
+                      <p className="text-zinc-300">
+                        Đổi sang <em>&quot;Đã hoàn tất&quot;</em> -&gt; Server tự động bắn CAPI sự kiện <strong>CompleteRegistration</strong>.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="pt-2 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={handleTestCapi}
+                    disabled={isTestingCapi || isSavingTracking}
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isTestingCapi ? 'animate-spin' : ''}`} />
+                    <span>{isTestingCapi ? 'Đang gửi test lên Meta...' : 'Bắn Thử Event Test CAPI'}</span>
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={isSavingTracking || isTestingCapi}
+                    className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs sm:text-sm font-bold shadow-lg shadow-blue-500/25 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>{isSavingTracking ? 'Đang lưu tracking...' : 'Lưu Cấu Hình Pixel & CAPI'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
       </main>
@@ -1779,6 +2127,51 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
                 placeholder="Ghi chú lịch hẹn, địa chỉ lắp đặt hoặc yêu cầu của khách..."
                 className="w-full p-3 rounded-xl bg-black/40 border border-white/15 text-white placeholder-zinc-500 text-xs sm:text-sm focus:outline-none focus:border-[#FF6320] focus:ring-1 focus:ring-[#FF6320]"
               />
+            </div>
+
+            {/* Meta CAPI Sync Logs */}
+            <div className="bg-black/40 p-4 rounded-2xl border border-white/10 space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold text-white">
+                <span className="flex items-center gap-1.5 text-blue-400">
+                  <Zap className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Đồng Bộ Meta Conversions API (CAPI):</span>
+                </span>
+                <span className="text-[11px] font-normal text-zinc-400 font-mono">
+                  IP: {selectedLead.clientMetadata?.clientIp || 'Chưa ghi nhận'}
+                </span>
+              </div>
+              {selectedLead.capiEvents && selectedLead.capiEvents.length > 0 ? (
+                <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
+                  {selectedLead.capiEvents.map((evt, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between text-[11px] p-2 rounded-lg bg-white/5 border border-white/5"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span className={`w-2 h-2 rounded-full ${evt.success ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                        <span className="font-bold text-white">{evt.eventName}</span>
+                        {evt.eventId && (
+                          <span className="text-zinc-500 font-mono text-[10px] truncate max-w-[120px]">
+                            ({evt.eventId})
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <span className={evt.success ? 'text-emerald-400 font-semibold' : 'text-red-400 font-semibold'}>
+                          {evt.response || (evt.success ? 'Thành công' : 'Lỗi')}
+                        </span>
+                        <span className="text-zinc-500 text-[10px] block">
+                          {new Date(evt.sentAt).toLocaleTimeString('vi-VN')}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-[11px] text-zinc-500 italic py-1">
+                  Chưa có sự kiện CAPI nào được ghi nhận cho khách hàng này.
+                </div>
+              )}
             </div>
 
             <div className="flex items-center justify-between pt-2">

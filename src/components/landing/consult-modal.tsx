@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { X, CheckCircle2, Loader2, ShieldCheck, Wifi, Phone } from 'lucide-react';
 import { useContact } from '@/context/ContactContext';
 import { usePackages } from '@/context/PackagesContext';
+import { trackPixel, generateEventId, getFbp, getFbc } from '@/lib/meta-pixel';
 
 interface ConsultModalProps {
   isOpen: boolean;
@@ -49,6 +50,22 @@ export default function ConsultModal({ isOpen, onClose, selectedPackage }: Consu
     setResult(null);
     setIsLoading(true);
 
+    // Tạo Event ID cho Deduplication giữa Pixel & CAPI
+    const eventId = generateEventId('lead');
+    const fbp = getFbp();
+    const fbc = getFbc();
+
+    // 1. Kích hoạt Pixel Client-side
+    trackPixel(
+      'Lead',
+      {
+        content_name: packageInterest,
+        content_category: province,
+        currency: 'VND',
+      },
+      { eventID: eventId }
+    );
+
     try {
       const response = await fetch('/api/dang-ky', {
         method: 'POST',
@@ -62,6 +79,9 @@ export default function ConsultModal({ isOpen, onClose, selectedPackage }: Consu
           packageInterest,
           note: note.trim(),
           source: 'Bong Bóng / Nút Tư Vấn',
+          eventId,
+          fbp,
+          fbc,
         }),
       });
 
