@@ -42,6 +42,8 @@ import {
   MessageSquare,
   Zap,
   AlertCircle,
+  Lock,
+  KeyRound,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -346,12 +348,98 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
     }
   }, [router]);
 
+  // ==================== ADMIN PROFILE & SECURITY ====================
+  const [currentAdminUser, setCurrentAdminUser] = useState(username);
+  const [adminCurrentPassword, setAdminCurrentPassword] = useState('');
+  const [adminNewUsername, setAdminNewUsername] = useState(username);
+  const [adminNewPassword, setAdminNewPassword] = useState('');
+  const [adminConfirmPassword, setAdminConfirmPassword] = useState('');
+  const [showAdminCurrentPass, setShowAdminCurrentPass] = useState(false);
+  const [showAdminNewPass, setShowAdminNewPass] = useState(false);
+  const [showAdminConfirmPass, setShowAdminConfirmPass] = useState(false);
+  const [isSavingAdminProfile, setIsSavingAdminProfile] = useState(false);
+  const [adminProfileSuccess, setAdminProfileSuccess] = useState(false);
+  const [adminProfileError, setAdminProfileError] = useState<string | null>(null);
+  const [adminIsCustom, setAdminIsCustom] = useState(false);
+
+  const fetchAdminProfile = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/profile');
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          setCurrentAdminUser(json.data.username || username);
+          setAdminNewUsername(json.data.username || username);
+          setAdminIsCustom(Boolean(json.data.isCustom));
+        }
+      }
+    } catch (err) {
+      console.error('Lỗi tải thông tin tài khoản admin:', err);
+    }
+  }, [username]);
+
   useEffect(() => {
     if (activeTab === 'settings') {
       fetchSettings();
       fetchTrackingSettings();
+      fetchAdminProfile();
     }
-  }, [activeTab, fetchSettings, fetchTrackingSettings]);
+  }, [activeTab, fetchSettings, fetchTrackingSettings, fetchAdminProfile]);
+
+  const handleSaveAdminProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAdminProfileError(null);
+    setAdminProfileSuccess(false);
+
+    if (!adminCurrentPassword) {
+      setAdminProfileError('Vui lòng nhập mật khẩu hiện tại để xác thực');
+      return;
+    }
+
+    if (adminNewUsername.trim().length < 3) {
+      setAdminProfileError('Tên đăng nhập mới phải có ít nhất 3 ký tự');
+      return;
+    }
+
+    if (adminNewPassword && adminNewPassword.trim().length < 6) {
+      setAdminProfileError('Mật khẩu mới phải có ít nhất 6 ký tự');
+      return;
+    }
+
+    if (adminNewPassword && adminNewPassword !== adminConfirmPassword) {
+      setAdminProfileError('Mật khẩu mới và mật khẩu xác nhận không khớp');
+      return;
+    }
+
+    setIsSavingAdminProfile(true);
+    try {
+      const res = await fetch('/api/admin/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentPassword: adminCurrentPassword,
+          newUsername: adminNewUsername.trim(),
+          newPassword: adminNewPassword.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAdminProfileSuccess(true);
+        setCurrentAdminUser(data.data.username);
+        setAdminIsCustom(true);
+        setAdminCurrentPassword('');
+        setAdminNewPassword('');
+        setAdminConfirmPassword('');
+        setTimeout(() => setAdminProfileSuccess(false), 6000);
+      } else {
+        setAdminProfileError(data.error || 'Lỗi khi cập nhật tài khoản quản trị');
+      }
+    } catch (err: any) {
+      setAdminProfileError(err.message || 'Lỗi kết nối khi cập nhật tài khoản');
+    } finally {
+      setIsSavingAdminProfile(false);
+    }
+  };
 
   const handleSaveTrackingSettings = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -863,7 +951,7 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
 
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-zinc-300 hidden md:inline">
-              Chào, <span className="text-[#FFA153] font-bold">{username}</span>
+              Chào, <span className="text-[#FFA153] font-bold">{currentAdminUser}</span>
             </span>
             <button
               onClick={handleLogout}
@@ -2010,6 +2098,192 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
                   >
                     <Save className="w-4 h-4" />
                     <span>{isSavingTracking ? 'Đang lưu tracking...' : 'Lưu Cấu Hình Pixel & CAPI'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* ============================================================ */}
+            {/* CARD 3: BẢO MẬT & ĐỔI TÀI KHOẢN QUẢN TRỊ VIÊN */}
+            {/* ============================================================ */}
+            <div className="bg-[#141A29] border border-white/10 rounded-3xl p-6 shadow-xl space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-purple-600/20 text-purple-400 flex items-center justify-center shrink-0 mt-0.5">
+                    <Shield className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                      <span>Bảo Mật &amp; Đổi Tài Khoản Quản Trị Viên</span>
+                      <span className="text-[10px] uppercase px-2 py-0.5 rounded-full font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                        Admin Security
+                      </span>
+                    </h3>
+                    <p className="text-xs text-zinc-400 mt-1">
+                      Cập nhật Tên đăng nhập và Mật khẩu truy cập hệ thống Quản trị trực tiếp trên giao diện, tự động lưu vào CSDL MongoDB Cloud.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Account Status Badge */}
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-black/40 border border-white/10 text-xs self-start sm:self-auto">
+                  <span className={`w-2 h-2 rounded-full ${adminIsCustom ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+                  <span className="text-zinc-300">
+                    {adminIsCustom ? 'Tài khoản tùy biến (MongoDB)' : 'Tài khoản mặc định (.env)'}
+                  </span>
+                </div>
+              </div>
+
+              {adminProfileSuccess && (
+                <div className="p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 flex items-center gap-3 animate-in fade-in">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                  <div className="text-xs sm:text-sm font-semibold">
+                    Đã cập nhật thông tin tài khoản quản trị thành công! Bạn có thể sử dụng thông tin mới cho lần đăng nhập tiếp theo.
+                  </div>
+                </div>
+              )}
+
+              {adminProfileError && (
+                <div className="p-4 rounded-2xl bg-red-500/15 border border-red-500/40 text-red-300 flex items-center gap-3 animate-in fade-in">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                  <div className="text-xs sm:text-sm font-semibold">
+                    {adminProfileError}
+                  </div>
+                </div>
+              )}
+
+              <form onSubmit={handleSaveAdminProfile} className="space-y-5">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                  {/* Left: Current Password & New Username */}
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-white mb-1.5 flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <Lock className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Mật khẩu hiện tại</span>
+                          <span className="text-red-400">*</span>
+                        </span>
+                        <span className="text-[11px] text-zinc-500 font-normal">Bắt buộc để xác thực</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showAdminCurrentPass ? 'text' : 'password'}
+                          required
+                          value={adminCurrentPassword}
+                          onChange={(e) => setAdminCurrentPassword(e.target.value)}
+                          placeholder="Nhập mật khẩu đang dùng để xác thực..."
+                          className="w-full h-11 px-3.5 pr-10 rounded-xl bg-black/40 border border-white/15 text-white font-mono text-sm focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowAdminCurrentPass(!showAdminCurrentPass)}
+                          className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-zinc-400 hover:text-white cursor-pointer"
+                        >
+                          {showAdminCurrentPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                      <span className="text-[11px] text-zinc-400 mt-1 block">
+                        Nhập mật khẩu hiện tại (mặc định ban đầu: <code>admin123</code>).
+                      </span>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-white mb-1.5 flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <Users className="w-3.5 h-3.5 text-blue-400" />
+                          <span>Tên đăng nhập mới</span>
+                          <span className="text-red-400">*</span>
+                        </span>
+                        <span className="text-[11px] text-zinc-400 font-mono">Hiện tại: {currentAdminUser}</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={adminNewUsername}
+                        onChange={(e) => setAdminNewUsername(e.target.value)}
+                        placeholder="Nhập tên đăng nhập mới (tối thiểu 3 ký tự)..."
+                        className="w-full h-11 px-3.5 rounded-xl bg-black/40 border border-white/15 text-white font-mono text-sm focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Right: New Password & Confirm Password */}
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-white mb-1.5 flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <KeyRound className="w-3.5 h-3.5 text-purple-400" />
+                          <span>Mật khẩu mới</span>
+                        </span>
+                        <span className="text-[11px] text-zinc-500 font-normal">Để trống nếu chỉ đổi tên đăng nhập</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showAdminNewPass ? 'text' : 'password'}
+                          value={adminNewPassword}
+                          onChange={(e) => setAdminNewPassword(e.target.value)}
+                          placeholder="Nhập mật khẩu mới (tối thiểu 6 ký tự)..."
+                          className="w-full h-11 px-3.5 pr-10 rounded-xl bg-black/40 border border-white/15 text-white font-mono text-sm focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowAdminNewPass(!showAdminNewPass)}
+                          className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-zinc-400 hover:text-white cursor-pointer"
+                        >
+                          {showAdminNewPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-white mb-1.5 flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <Lock className="w-3.5 h-3.5 text-purple-400" />
+                          <span>Xác nhận mật khẩu mới</span>
+                        </span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showAdminConfirmPass ? 'text' : 'password'}
+                          value={adminConfirmPassword}
+                          onChange={(e) => setAdminConfirmPassword(e.target.value)}
+                          placeholder="Nhập lại mật khẩu mới..."
+                          className="w-full h-11 px-3.5 pr-10 rounded-xl bg-black/40 border border-white/15 text-white font-mono text-sm focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowAdminConfirmPass(!showAdminConfirmPass)}
+                          className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-zinc-400 hover:text-white cursor-pointer"
+                        >
+                          {showAdminConfirmPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Security Tips */}
+                <div className="p-4 rounded-2xl bg-black/30 border border-white/5 text-[11px] text-zinc-400 leading-relaxed flex items-start gap-3">
+                  <Shield className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="text-white block mb-0.5">Tiêu chuẩn bảo mật:</strong>
+                    Mật khẩu được mã hóa một chiều bằng thuật toán <strong>HMAC-SHA256 kết hợp mã Salt ngẫu nhiên</strong> trước khi lưu vào MongoDB. Sau khi cập nhật, phiên đăng nhập hiện tại sẽ được cấp token mới tự động mà không làm gián đoạn công việc của bạn.
+                  </div>
+                </div>
+
+                {/* Submit */}
+                <div className="pt-2 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div className="text-xs text-zinc-400">
+                    Cập nhật có hiệu lực ngay lập tức cho các lần đăng nhập tiếp theo
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSavingAdminProfile}
+                    className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs sm:text-sm font-bold shadow-lg shadow-purple-500/25 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>{isSavingAdminProfile ? 'Đang cập nhật tài khoản...' : 'Lưu Thay Đổi Tài Khoản'}</span>
                   </button>
                 </div>
               </form>

@@ -152,8 +152,9 @@ export default function AdminLoginPage() {
 
           {/* Quick Credential Hint for Local Dev */}
           <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-[11px] text-zinc-400 leading-relaxed">
-            <span className="font-semibold text-zinc-300">Tài khoản mặc định: </span>
+            <span className="font-semibold text-zinc-300">Tài khoản ban đầu: </span>
             <code className="text-[#FFA153] font-mono font-bold">admin</code> / <code className="text-[#FFA153] font-mono font-bold">admin123</code>
+            <span className="block text-[10px] text-zinc-500 mt-0.5">(Hoặc tài khoản bạn đã đổi trong trang Quản trị &gt; Cài đặt)</span>
           </div>
 
           <button

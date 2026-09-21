@@ -13,9 +13,6 @@ export async function POST(request: NextRequest) {
 
     const { username, password } = body;
 
-    const expectedUsername = process.env.ADMIN_USERNAME || 'admin';
-    const expectedPassword = process.env.ADMIN_PASSWORD || 'admin123';
-
     if (!username || !password) {
       return NextResponse.json(
         { success: false, error: 'Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu' },
@@ -23,8 +20,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // So khớp thông tin đăng nhập
-    if (username.trim() !== expectedUsername || password !== expectedPassword) {
+    const { getStoredAdminCredentials, verifyAdminPassword } = await import('@/lib/admin-auth');
+    const storedCreds = await getStoredAdminCredentials();
+
+    // So khớp tên đăng nhập và mật khẩu
+    const isUsernameMatch = username.trim().toLowerCase() === storedCreds.username.toLowerCase();
+    const isPasswordMatch = verifyAdminPassword(password, storedCreds);
+
+    if (!isUsernameMatch || !isPasswordMatch) {
       return NextResponse.json(
         { success: false, error: 'Tên đăng nhập hoặc mật khẩu không chính xác' },
         { status: 401 }
