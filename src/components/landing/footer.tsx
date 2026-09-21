@@ -104,6 +104,14 @@ export default function Footer() {
             <li><a href="#" className="hover:text-white transition-colors">Chính sách bảo mật thông tin</a></li>
             <li><a href="#" className="hover:text-white transition-colors">Quy định và điều khoản</a></li>
             <li><a href="#" className="hover:text-white transition-colors">Liên hệ đại lý 3 miền</a></li>
+            <li className="pt-1">
+              <a
+                href="/admin"
+                className="text-orange-400 hover:text-[#FFA153] transition-colors flex items-center gap-1.5 font-semibold text-xs"
+              >
+                <span>🛡️ Cổng Quản Trị (Admin)</span>
+              </a>
+            </li>
           </ul>
         </div>
 

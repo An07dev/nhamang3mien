@@ -1,0 +1,1857 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  Users,
+  Clock,
+  CheckCircle2,
+  Search,
+  Filter,
+  Download,
+  RefreshCw,
+  LogOut,
+  ExternalLink,
+  Shield,
+  Copy,
+  Check,
+  Trash2,
+  Edit3,
+  X,
+  MapPin,
+  Calendar,
+  Layers,
+  Phone,
+  Flame,
+  Plus,
+  Wifi,
+  Tv,
+  Building2,
+  FolderOpen,
+  Sparkles,
+  Tag,
+  Gauge,
+  DollarSign,
+  ToggleLeft,
+  ToggleRight,
+  Eye,
+  EyeOff,
+} from 'lucide-react';
+import Link from 'next/link';
+
+export interface LeadItem {
+  _id: string;
+  name: string;
+  phone: string;
+  province?: string;
+  packageInterest?: string;
+  source?: string;
+  note?: string;
+  status: 'pending' | 'contacted' | 'completed';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface KPIStats {
+  total: number;
+  pending: number;
+  contacted: number;
+  completed: number;
+  today: number;
+}
+
+export interface PackageData {
+  _id: string;
+  name: string;
+  categoryKey: string;
+  speed: string;
+  price: string;
+  originalPrice?: string;
+  isPopular: boolean;
+  tag?: string;
+  theme:
+    | 'orange'
+    | 'red'
+    | 'purple'
+    | 'slate'
+    | 'emerald'
+    | 'blue'
+    | 'cyan'
+    | 'amber'
+    | 'rose'
+    | 'indigo'
+    | 'teal'
+    | 'dark';
+  suitableFor: string;
+  features: string[];
+  order: number;
+  isActive: boolean;
+}
+
+export interface CategoryData {
+  _id: string;
+  key: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  order: number;
+  isActive: boolean;
+  packageCount?: number;
+}
+
+interface AdminDashboardClientProps {
+  username: string;
+}
+
+export default function AdminDashboardClient({ username }: AdminDashboardClientProps) {
+  const router = useRouter();
+
+  // Top Tabs
+  const [activeTab, setActiveTab] = useState<'leads' | 'packages' | 'categories'>('leads');
+
+  // Leads State
+  const [leads, setLeads] = useState<LeadItem[]>([]);
+  const [stats, setStats] = useState<KPIStats>({
+    total: 0,
+    pending: 0,
+    contacted: 0,
+    completed: 0,
+    today: 0,
+  });
+  const [leadSearch, setLeadSearch] = useState('');
+  const [leadStatusFilter, setLeadStatusFilter] = useState<'all' | 'pending' | 'contacted' | 'completed'>('all');
+  const [isLeadLoading, setIsLeadLoading] = useState(true);
+  const [selectedLead, setSelectedLead] = useState<LeadItem | null>(null);
+  const [editStatus, setEditStatus] = useState<'pending' | 'contacted' | 'completed'>('pending');
+  const [editNote, setEditNote] = useState('');
+  const [isSavingLead, setIsSavingLead] = useState(false);
+  const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
+
+  // Packages State
+  const [packages, setPackages] = useState<PackageData[]>([]);
+  const [categories, setCategories] = useState<CategoryData[]>([]);
+  const [packageCategoryFilter, setPackageCategoryFilter] = useState<string>('all');
+  const [packageSearch, setPackageSearch] = useState('');
+  const [isPackageLoading, setIsPackageLoading] = useState(false);
+
+  // Package Modal (Thêm / Sửa)
+  const [isPkgModalOpen, setIsPkgModalOpen] = useState(false);
+  const [editingPkgId, setEditingPkgId] = useState<string | null>(null);
+  const [pkgName, setPkgName] = useState('');
+  const [pkgCategoryKey, setPkgCategoryKey] = useState('personal');
+  const [pkgSpeed, setPkgSpeed] = useState('');
+  const [pkgPrice, setPkgPrice] = useState('');
+  const [pkgOriginalPrice, setPkgOriginalPrice] = useState('');
+  const [pkgTag, setPkgTag] = useState('');
+  const [pkgTheme, setPkgTheme] = useState<PackageData['theme']>('orange');
+  const [pkgSuitableFor, setPkgSuitableFor] = useState('');
+  const [pkgFeatures, setPkgFeatures] = useState<string[]>(['']);
+  const [pkgIsPopular, setPkgIsPopular] = useState(false);
+  const [pkgOrder, setPkgOrder] = useState(1);
+  const [pkgIsActive, setPkgIsActive] = useState(true);
+  const [isSavingPkg, setIsSavingPkg] = useState(false);
+
+  // Category Modal (Thêm / Sửa)
+  const [isCatModalOpen, setIsCatModalOpen] = useState(false);
+  const [editingCatId, setEditingCatId] = useState<string | null>(null);
+  const [catKey, setCatKey] = useState('');
+  const [catName, setCatName] = useState('');
+  const [catDescription, setCatDescription] = useState('');
+  const [catIcon, setCatIcon] = useState('Wifi');
+  const [catOrder, setCatOrder] = useState(1);
+  const [catIsActive, setCatIsActive] = useState(true);
+  const [isSavingCat, setIsSavingCat] = useState(false);
+
+  // Clock
+  const [currentTime, setCurrentTime] = useState('');
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      setCurrentTime(
+        now.toLocaleDateString('vi-VN', {
+          weekday: 'long',
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        })
+      );
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // 1. Fetch Leads
+  const fetchLeads = useCallback(async () => {
+    setIsLeadLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (leadSearch.trim()) params.append('search', leadSearch.trim());
+      if (leadStatusFilter !== 'all') params.append('status', leadStatusFilter);
+
+      const res = await fetch(`/api/admin/leads?${params.toString()}`);
+      if (res.status === 401) {
+        router.push('/admin/login');
+        return;
+      }
+      const json = await res.json();
+      if (json.success) {
+        setLeads(json.data || []);
+        if (json.stats) setStats(json.stats);
+      }
+    } catch (err) {
+      console.error('Lỗi tải danh sách khách hàng:', err);
+    } finally {
+      setIsLeadLoading(false);
+    }
+  }, [leadSearch, leadStatusFilter, router]);
+
+  useEffect(() => {
+    if (activeTab === 'leads') {
+      const debounceTimer = setTimeout(() => {
+        fetchLeads();
+      }, 250);
+      return () => clearTimeout(debounceTimer);
+    }
+  }, [activeTab, fetchLeads]);
+
+  // 2. Fetch Packages & Categories
+  const fetchPackagesAndCategories = useCallback(async () => {
+    setIsPackageLoading(true);
+    try {
+      const [pkgRes, catRes] = await Promise.all([
+        fetch('/api/admin/packages'),
+        fetch('/api/admin/categories'),
+      ]);
+
+      if (pkgRes.status === 401 || catRes.status === 401) {
+        router.push('/admin/login');
+        return;
+      }
+
+      const pkgData = await pkgRes.json();
+      const catData = await catRes.json();
+
+      if (pkgData.success) {
+        setPackages(pkgData.data || []);
+      }
+      if (catData.success) {
+        setCategories(catData.data || []);
+      }
+    } catch (err) {
+      console.error('Lỗi tải gói cước:', err);
+    } finally {
+      setIsPackageLoading(false);
+    }
+  }, [router]);
+
+  useEffect(() => {
+    if (activeTab === 'packages' || activeTab === 'categories') {
+      fetchPackagesAndCategories();
+    }
+  }, [activeTab, fetchPackagesAndCategories]);
+
+  // Logout
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/admin/logout', { method: 'POST' });
+      router.push('/admin/login');
+      router.refresh();
+    } catch (err) {
+      console.error('Lỗi khi đăng xuất:', err);
+    }
+  };
+
+  // Copy phone number
+  const handleCopyPhone = (phone: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(phone);
+    setCopiedPhone(phone);
+    setTimeout(() => setCopiedPhone(null), 2000);
+  };
+
+  // Quick inline status change for lead
+  const handleQuickStatusChange = async (
+    id: string,
+    newStatus: 'pending' | 'contacted' | 'completed',
+    e: React.MouseEvent
+  ) => {
+    e.stopPropagation();
+    try {
+      const res = await fetch(`/api/admin/leads/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setLeads((prev) =>
+          prev.map((item) => (item._id === id ? { ...item, status: newStatus } : item))
+        );
+        fetchLeads();
+      }
+    } catch (err) {
+      console.error('Lỗi đổi trạng thái:', err);
+    }
+  };
+
+  // Open lead detail modal
+  const handleOpenLeadDetail = (lead: LeadItem) => {
+    setSelectedLead(lead);
+    setEditStatus(lead.status);
+    setEditNote(lead.note || '');
+  };
+
+  // Save lead note/status
+  const handleSaveLeadModal = async () => {
+    if (!selectedLead) return;
+    setIsSavingLead(true);
+    try {
+      const res = await fetch(`/api/admin/leads/${selectedLead._id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: editStatus,
+          note: editNote,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSelectedLead(null);
+        fetchLeads();
+      }
+    } catch (err) {
+      console.error('Lỗi cập nhật khách hàng:', err);
+    } finally {
+      setIsSavingLead(false);
+    }
+  };
+
+  // Delete lead
+  const handleDeleteLead = async (id: string, name: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm(`Quý khách có chắc chắn muốn xóa khách hàng "${name}"?`)) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/admin/leads/${id}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (data.success) {
+        setLeads((prev) => prev.filter((item) => item._id !== id));
+        if (selectedLead?._id === id) setSelectedLead(null);
+        fetchLeads();
+      }
+    } catch (err) {
+      console.error('Lỗi xóa khách hàng:', err);
+    }
+  };
+
+  // Export CSV
+  const handleExportCsv = () => {
+    window.open('/api/admin/leads/export', '_blank');
+  };
+
+  // ==================== PACKAGE ACTIONS ====================
+
+  const handleOpenNewPackage = () => {
+    setEditingPkgId(null);
+    setPkgName('');
+    setPkgCategoryKey(categories[0]?.key || 'personal');
+    setPkgSpeed('1 Gbps / 300 Mbps');
+    setPkgPrice('225.000đ');
+    setPkgOriginalPrice('320.000đ');
+    setPkgTag('BÁN CHẠY NHẤT');
+    setPkgTheme('orange');
+    setPkgSuitableFor('Gia đình đa thiết bị, xem phim 4K');
+    setPkgFeatures([
+      'Trang bị Modem Wi-Fi 6 thế hệ mới nhất',
+      'Lắp đặt siêu tốc từ 12h - 36h',
+      'Miễn phí lắp đặt khi thanh toán trước',
+      'Hỗ trợ kỹ thuật 24/7',
+    ]);
+    setPkgIsPopular(false);
+    setPkgOrder(packages.length + 1);
+    setPkgIsActive(true);
+    setIsPkgModalOpen(true);
+  };
+
+  const handleOpenEditPackage = (pkg: PackageData) => {
+    setEditingPkgId(pkg._id);
+    setPkgName(pkg.name);
+    setPkgCategoryKey(pkg.categoryKey);
+    setPkgSpeed(pkg.speed);
+    setPkgPrice(pkg.price);
+    setPkgOriginalPrice(pkg.originalPrice || '');
+    setPkgTag(pkg.tag || '');
+    setPkgTheme(pkg.theme || 'orange');
+    setPkgSuitableFor(pkg.suitableFor || '');
+    setPkgFeatures(pkg.features && pkg.features.length > 0 ? pkg.features : ['']);
+    setPkgIsPopular(pkg.isPopular);
+    setPkgOrder(pkg.order || 1);
+    setPkgIsActive(pkg.isActive);
+    setIsPkgModalOpen(true);
+  };
+
+  const handleSavePackage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pkgName || !pkgSpeed || !pkgPrice) {
+      alert('Vui lòng điền đủ Tên gói, Tốc độ và Giá cước!');
+      return;
+    }
+
+    setIsSavingPkg(true);
+    try {
+      const payload = {
+        name: pkgName,
+        categoryKey: pkgCategoryKey,
+        speed: pkgSpeed,
+        price: pkgPrice,
+        originalPrice: pkgOriginalPrice,
+        tag: pkgTag,
+        theme: pkgTheme,
+        suitableFor: pkgSuitableFor,
+        features: pkgFeatures.filter((f) => f.trim().length > 0),
+        isPopular: pkgIsPopular,
+        order: Number(pkgOrder),
+        isActive: pkgIsActive,
+      };
+
+      let res;
+      if (editingPkgId) {
+        res = await fetch(`/api/admin/packages/${editingPkgId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        res = await fetch('/api/admin/packages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      }
+
+      const data = await res.json();
+      if (data.success) {
+        setIsPkgModalOpen(false);
+        fetchPackagesAndCategories();
+      } else {
+        alert(data.error || 'Có lỗi xảy ra');
+      }
+    } catch (err) {
+      console.error('Lỗi lưu gói cước:', err);
+    } finally {
+      setIsSavingPkg(false);
+    }
+  };
+
+  const handleDeletePackage = async (pkg: PackageData) => {
+    if (!confirm(`Quý khách có chắc chắn muốn xóa gói cước "${pkg.name}"?`)) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/admin/packages/${pkg._id}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchPackagesAndCategories();
+      } else {
+        alert(data.error || 'Không thể xóa');
+      }
+    } catch (err) {
+      console.error('Lỗi xóa gói cước:', err);
+    }
+  };
+
+  const handleTogglePackageActive = async (pkg: PackageData) => {
+    try {
+      const res = await fetch(`/api/admin/packages/${pkg._id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: !pkg.isActive }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPackages((prev) =>
+          prev.map((p) => (p._id === pkg._id ? { ...p, isActive: !p.isActive } : p))
+        );
+      }
+    } catch (err) {
+      console.error('Lỗi bật tắt gói:', err);
+    }
+  };
+
+  // Features list in Package modal
+  const handleAddFeatureLine = () => {
+    setPkgFeatures((prev) => [...prev, '']);
+  };
+
+  const handleUpdateFeatureLine = (index: number, val: string) => {
+    setPkgFeatures((prev) => {
+      const copy = [...prev];
+      copy[index] = val;
+      return copy;
+    });
+  };
+
+  const handleRemoveFeatureLine = (index: number) => {
+    setPkgFeatures((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // ==================== CATEGORY ACTIONS ====================
+
+  const handleOpenNewCategory = () => {
+    setEditingCatId(null);
+    setCatKey('');
+    setCatName('');
+    setCatDescription('');
+    setCatIcon('Wifi');
+    setCatOrder(categories.length + 1);
+    setCatIsActive(true);
+    setIsCatModalOpen(true);
+  };
+
+  const handleOpenEditCategory = (cat: CategoryData) => {
+    setEditingCatId(cat._id);
+    setCatKey(cat.key);
+    setCatName(cat.name);
+    setCatDescription(cat.description || '');
+    setCatIcon(cat.icon || 'Wifi');
+    setCatOrder(cat.order || 1);
+    setCatIsActive(cat.isActive);
+    setIsCatModalOpen(true);
+  };
+
+  const handleSaveCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!catName || (!editingCatId && !catKey)) {
+      alert('Vui lòng điền đủ Tên và Mã đầu mục!');
+      return;
+    }
+
+    setIsSavingCat(true);
+    try {
+      let res;
+      if (editingCatId) {
+        res = await fetch(`/api/admin/categories/${editingCatId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: catName,
+            description: catDescription,
+            icon: catIcon,
+            order: Number(catOrder),
+            isActive: catIsActive,
+          }),
+        });
+      } else {
+        res = await fetch('/api/admin/categories', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            key: catKey,
+            name: catName,
+            description: catDescription,
+            icon: catIcon,
+            order: Number(catOrder),
+            isActive: catIsActive,
+          }),
+        });
+      }
+
+      const data = await res.json();
+      if (data.success) {
+        setIsCatModalOpen(false);
+        fetchPackagesAndCategories();
+      } else {
+        alert(data.error || 'Có lỗi xảy ra');
+      }
+    } catch (err) {
+      console.error('Lỗi lưu đầu mục:', err);
+    } finally {
+      setIsSavingCat(false);
+    }
+  };
+
+  const handleDeleteCategory = async (cat: CategoryData) => {
+    if (!confirm(`Quý khách có chắc chắn muốn xóa đầu mục "${cat.name}"?`)) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/admin/categories/${cat._id}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchPackagesAndCategories();
+      } else {
+        alert(data.error || 'Không thể xóa');
+      }
+    } catch (err) {
+      console.error('Lỗi xóa đầu mục:', err);
+    }
+  };
+
+  // Filtered packages
+  const filteredPackages = packages.filter((p) => {
+    const matchCategory =
+      packageCategoryFilter === 'all' || p.categoryKey === packageCategoryFilter;
+    const matchSearch =
+      !packageSearch.trim() ||
+      p.name.toLowerCase().includes(packageSearch.toLowerCase()) ||
+      p.speed.toLowerCase().includes(packageSearch.toLowerCase()) ||
+      p.price.toLowerCase().includes(packageSearch.toLowerCase());
+    return matchCategory && matchSearch;
+  });
+
+  return (
+    <div className="min-h-screen bg-[#0E131F] text-zinc-100 flex flex-col font-sans selection:bg-[#FF6320] selection:text-white">
+      {/* 1. Header Bar */}
+      <header className="sticky top-0 z-30 bg-[#141A29]/95 backdrop-blur-xl border-b border-white/10 px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-lg">
+        {/* Left: Brand Identity */}
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#FF6320] to-[#FFA153] p-0.5 shadow-md shadow-orange-500/30">
+            <div className="w-full h-full bg-[#182030] rounded-[10px] flex items-center justify-center overflow-hidden">
+              <img src="/logo.png" alt="Nhà Mạng Ba Miền" className="w-8 h-8 object-contain" />
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-black text-white text-base sm:text-lg tracking-tight">
+                Nhà Mạng 3 Miền
+              </span>
+              <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold border border-emerald-500/30">
+                <Shield className="w-2.5 h-2.5" />
+                ADMIN PORTAL
+              </span>
+            </div>
+            <div className="text-[11px] text-zinc-400 font-medium">
+              Quản lý đăng ký &amp; Cấu hình gói cước trực tuyến
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Clock, User Badge, Action Buttons */}
+        <div className="flex items-center gap-2.5 sm:gap-4">
+          <div className="hidden lg:block text-right">
+            <div className="text-xs font-mono font-bold text-zinc-300 capitalize">{currentTime}</div>
+            <div className="text-[11px] text-emerald-400 font-semibold flex items-center justify-end gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+              <span>MongoDB Kết nối ổn định</span>
+            </div>
+          </div>
+
+          <div className="h-6 w-px bg-white/10 hidden sm:block" />
+
+          <Link
+            href="/"
+            target="_blank"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-zinc-300 hover:text-white border border-white/10 transition-colors"
+            title="Mở trang chủ khách hàng"
+          >
+            <span>Trang Chủ</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </Link>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-zinc-300 hidden md:inline">
+              Chào, <span className="text-[#FFA153] font-bold">{username}</span>
+            </span>
+            <button
+              onClick={handleLogout}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-500/15 hover:bg-red-500/25 text-red-300 hover:text-red-200 border border-red-500/30 text-xs font-semibold transition-colors cursor-pointer"
+              title="Đăng xuất khỏi hệ thống"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Đăng Xuất</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* 2. Top Navigation Tabs */}
+      <div className="bg-[#141A29]/60 border-b border-white/10 px-4 sm:px-8">
+        <div className="max-w-7xl mx-auto flex items-center gap-2 sm:gap-4 overflow-x-auto py-2.5 scrollbar-none">
+          <button
+            onClick={() => setActiveTab('leads')}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'leads'
+                ? 'bg-gradient-to-r from-[#FF6320] to-[#FFA153] text-white shadow-lg shadow-orange-500/25'
+                : 'bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            <span>Khách Hàng Đăng Ký ({stats.total})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('packages')}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'packages'
+                ? 'bg-gradient-to-r from-[#FF6320] to-[#FFA153] text-white shadow-lg shadow-orange-500/25'
+                : 'bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white'
+            }`}
+          >
+            <Layers className="w-4 h-4" />
+            <span>Quản Lý Gói Cước ({packages.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('categories')}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'categories'
+                ? 'bg-gradient-to-r from-[#FF6320] to-[#FFA153] text-white shadow-lg shadow-orange-500/25'
+                : 'bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white'
+            }`}
+          >
+            <FolderOpen className="w-4 h-4" />
+            <span>Đầu Mục Gói Cước ({categories.length})</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 3. Main Workspace */}
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+
+        {/* ============================================================ */}
+        {/* TAB 1: QUẢN LÝ KHÁCH HÀNG (LEADS) */}
+        {/* ============================================================ */}
+        {activeTab === 'leads' && (
+          <div className="space-y-6">
+            {/* KPI Summary Cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+              <div className="rounded-2xl bg-[#151D2C] border border-white/10 p-4 sm:p-5 shadow-lg relative overflow-hidden">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs sm:text-sm font-semibold text-zinc-400">Tổng Khách Đăng Ký</span>
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-blue-500/15 text-blue-400 flex items-center justify-center">
+                    <Users className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </div>
+                </div>
+                <div className="text-2xl sm:text-3xl font-black text-white mt-2 font-mono">{stats.total}</div>
+                <div className="text-[11px] text-zinc-500 mt-1">Toàn bộ dữ liệu từ trước đến nay</div>
+              </div>
+
+              <div className="rounded-2xl bg-[#151D2C] border border-orange-500/30 p-4 sm:p-5 shadow-lg relative overflow-hidden">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs sm:text-sm font-semibold text-orange-400">Đăng Ký Hôm Nay</span>
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-orange-500/15 text-orange-400 flex items-center justify-center">
+                    <Flame className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </div>
+                </div>
+                <div className="text-2xl sm:text-3xl font-black text-white mt-2 font-mono flex items-center gap-2">
+                  <span>{stats.today}</span>
+                  {stats.today > 0 && (
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-300 font-sans">
+                      Mới
+                    </span>
+                  )}
+                </div>
+                <div className="text-[11px] text-orange-400/80 mt-1">Khách đăng ký trong 24h qua</div>
+              </div>
+
+              <div className="rounded-2xl bg-[#151D2C] border border-amber-500/30 p-4 sm:p-5 shadow-lg relative overflow-hidden">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs sm:text-sm font-semibold text-amber-400">Chờ Gọi Tư Vấn</span>
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center">
+                    <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </div>
+                </div>
+                <div className="text-2xl sm:text-3xl font-black text-amber-400 mt-2 font-mono flex items-center gap-2">
+                  <span>{stats.pending}</span>
+                  {stats.pending > 0 && <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />}
+                </div>
+                <div className="text-[11px] text-amber-400/80 mt-1">Cần chuyên viên liên hệ trong 5p</div>
+              </div>
+
+              <div className="rounded-2xl bg-[#151D2C] border border-emerald-500/30 p-4 sm:p-5 shadow-lg relative overflow-hidden">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs sm:text-sm font-semibold text-emerald-400">Đã Lắp Đặt Xong</span>
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
+                    <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </div>
+                </div>
+                <div className="text-2xl sm:text-3xl font-black text-emerald-400 mt-2 font-mono">{stats.completed}</div>
+                <div className="text-[11px] text-emerald-400/80 mt-1">Đã ký hợp đồng &amp; nghiệm thu</div>
+              </div>
+            </div>
+
+            {/* Toolbar */}
+            <div className="bg-[#141A29] border border-white/10 rounded-2xl p-4 sm:p-5 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="relative flex-1 max-w-md">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
+                  <Search className="w-4 h-4" />
+                </div>
+                <input
+                  type="text"
+                  value={leadSearch}
+                  onChange={(e) => setLeadSearch(e.target.value)}
+                  placeholder="Tìm theo tên, số điện thoại, tỉnh thành..."
+                  className="w-full h-10 pl-10 pr-9 rounded-xl bg-black/40 border border-white/15 text-white placeholder-zinc-500 text-xs sm:text-sm focus:outline-none focus:border-[#FF6320] focus:ring-1 focus:ring-[#FF6320] transition-colors"
+                />
+                {leadSearch && (
+                  <button
+                    onClick={() => setLeadSearch('')}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-400 hover:text-white"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+                <button
+                  onClick={() => setLeadStatusFilter('all')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+                    leadStatusFilter === 'all'
+                      ? 'bg-white text-zinc-900 shadow-md font-bold'
+                      : 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  Tất cả ({stats.total})
+                </button>
+                <button
+                  onClick={() => setLeadStatusFilter('pending')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer flex items-center gap-1.5 ${
+                    leadStatusFilter === 'pending'
+                      ? 'bg-amber-500 text-zinc-950 font-bold shadow-md shadow-amber-500/20'
+                      : 'bg-amber-500/10 text-amber-300 hover:bg-amber-500/20'
+                  }`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                  Chờ gọi ({stats.pending})
+                </button>
+                <button
+                  onClick={() => setLeadStatusFilter('contacted')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer flex items-center gap-1.5 ${
+                    leadStatusFilter === 'contacted'
+                      ? 'bg-blue-500 text-white font-bold shadow-md shadow-blue-500/20'
+                      : 'bg-blue-500/10 text-blue-300 hover:bg-blue-500/20'
+                  }`}
+                >
+                  Đã gọi ({stats.contacted})
+                </button>
+                <button
+                  onClick={() => setLeadStatusFilter('completed')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer flex items-center gap-1.5 ${
+                    leadStatusFilter === 'completed'
+                      ? 'bg-emerald-500 text-white font-bold shadow-md shadow-emerald-500/20'
+                      : 'bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
+                  }`}
+                >
+                  Hoàn tất ({stats.completed})
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => fetchLeads()}
+                  disabled={isLeadLoading}
+                  className="p-2 sm:px-3 sm:py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-zinc-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                  title="Làm mới danh sách"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isLeadLoading ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline">Làm mới</span>
+                </button>
+
+                <button
+                  onClick={handleExportCsv}
+                  className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold shadow-md shadow-emerald-600/25 flex items-center gap-1.5 transition-all cursor-pointer"
+                  title="Tải danh sách ra file Excel / CSV UTF-8"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Xuất Excel</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Desktop Table */}
+            <div className="bg-[#141A29] border border-white/10 rounded-2xl shadow-xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <h2 className="font-bold text-white text-sm sm:text-base">Danh Sách Khách Hàng Đăng Ký</h2>
+                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-white/10 text-zinc-300 font-mono font-semibold">
+                    {leads.length} đơn
+                  </span>
+                </div>
+                {isLeadLoading && (
+                  <span className="text-xs text-[#FFA153] flex items-center gap-1.5">
+                    <RefreshCw className="w-3 h-3 animate-spin" />
+                    <span>Đang đồng bộ...</span>
+                  </span>
+                )}
+              </div>
+
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left text-xs sm:text-sm">
+                  <thead className="bg-[#0E131F]/80 text-zinc-400 font-semibold border-b border-white/10 uppercase tracking-wider text-[11px]">
+                    <tr>
+                      <th className="py-3 px-4">STT</th>
+                      <th className="py-3 px-4">Khách Hàng</th>
+                      <th className="py-3 px-4">Số Điện Thoại</th>
+                      <th className="py-3 px-4">Khu Vực &amp; Gói Cước</th>
+                      <th className="py-3 px-4">Nguồn</th>
+                      <th className="py-3 px-4">Trạng Thái Xử Lý</th>
+                      <th className="py-3 px-4 text-right">Thao Tác</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {leads.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="py-12 text-center text-zinc-400">
+                          <div className="max-w-xs mx-auto space-y-2">
+                            <Users className="w-10 h-10 text-zinc-600 mx-auto" />
+                            <p className="font-semibold text-zinc-300">Không tìm thấy khách hàng nào</p>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      leads.map((item, index) => {
+                        const createdDate = new Date(item.createdAt).toLocaleString('vi-VN', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                        });
+
+                        return (
+                          <tr
+                            key={item._id}
+                            onClick={() => handleOpenLeadDetail(item)}
+                            className="hover:bg-white/[0.03] transition-colors cursor-pointer group"
+                          >
+                            <td className="py-3.5 px-4 font-mono text-zinc-500 text-xs">{index + 1}</td>
+                            <td className="py-3.5 px-4">
+                              <div className="font-bold text-white group-hover:text-[#FFA153] transition-colors">
+                                {item.name}
+                              </div>
+                              <div className="text-[11px] text-zinc-500 flex items-center gap-1 mt-0.5">
+                                <Calendar className="w-3 h-3" />
+                                <span>{createdDate}</span>
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono font-bold text-white tracking-wide text-sm">
+                                  {item.phone}
+                                </span>
+                                <a
+                                  href={`tel:${item.phone}`}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="w-7 h-7 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 flex items-center justify-center transition-colors"
+                                  title={`Gọi: ${item.phone}`}
+                                >
+                                  <Phone className="w-3.5 h-3.5" />
+                                </a>
+                                <button
+                                  onClick={(e) => handleCopyPhone(item.phone, e)}
+                                  className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                                  title="Sao chép số"
+                                >
+                                  {copiedPhone === item.phone ? (
+                                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                  ) : (
+                                    <Copy className="w-3.5 h-3.5" />
+                                  )}
+                                </button>
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <div className="inline-block px-2.5 py-0.5 rounded-lg bg-orange-500/15 text-[#FFA153] text-xs font-bold border border-orange-500/20">
+                                {item.packageInterest || 'Gói Sky (1 Gbps)'}
+                              </div>
+                              <div className="text-[11px] text-zinc-400 flex items-center gap-1 mt-1">
+                                <MapPin className="w-3 h-3 text-zinc-500" />
+                                <span>{item.province || 'Toàn quốc'}</span>
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <span className="text-[11px] font-semibold text-zinc-400 bg-white/5 px-2 py-1 rounded-md">
+                                {item.source || 'Website'}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4">
+                              {item.status === 'pending' && (
+                                <button
+                                  onClick={(e) => handleQuickStatusChange(item._id, 'contacted', e)}
+                                  className="px-2.5 py-1 rounded-full bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-bold border border-amber-500/30 flex items-center gap-1.5 cursor-pointer"
+                                  title="Đánh dấu: Đã gọi"
+                                >
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                                  <span>Chờ liên hệ</span>
+                                </button>
+                              )}
+                              {item.status === 'contacted' && (
+                                <button
+                                  onClick={(e) => handleQuickStatusChange(item._id, 'completed', e)}
+                                  className="px-2.5 py-1 rounded-full bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 text-xs font-bold border border-blue-500/30 flex items-center gap-1.5 cursor-pointer"
+                                  title="Đánh dấu: Hoàn tất"
+                                >
+                                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                                  <span>Đã gọi điện</span>
+                                </button>
+                              )}
+                              {item.status === 'completed' && (
+                                <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-500/30 inline-flex items-center gap-1.5">
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                                  <span>Đã hoàn tất</span>
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3.5 px-4 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenLeadDetail(item);
+                                  }}
+                                  className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                                  title="Chi tiết &amp; Ghi chú"
+                                >
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={(e) => handleDeleteLead(item._id, item.name, e)}
+                                  className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors cursor-pointer"
+                                  title="Xóa"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Card Layout */}
+              <div className="md:hidden divide-y divide-white/10">
+                {leads.map((item, index) => (
+                  <div
+                    key={item._id}
+                    onClick={() => handleOpenLeadDetail(item)}
+                    className="p-4 space-y-3 active:bg-white/[0.02]"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="font-bold text-white text-base">
+                          {index + 1}. {item.name}
+                        </div>
+                        <div className="text-[11px] text-zinc-400 mt-0.5">
+                          {item.province || 'Toàn quốc'} &bull; {new Date(item.createdAt).toLocaleDateString('vi-VN')}
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[11px] font-bold">
+                        {item.status}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between bg-black/30 p-2.5 rounded-xl border border-white/5">
+                      <div className="text-xs font-bold text-[#FFA153]">{item.packageInterest}</div>
+                      <a
+                        href={`tel:${item.phone}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="px-3 py-1.5 rounded-lg bg-emerald-500 text-zinc-950 font-bold text-xs flex items-center gap-1"
+                      >
+                        <Phone className="w-3 h-3" /> Gọi
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================ */}
+        {/* TAB 2: QUẢN LÝ GÓI CƯỚC (PACKAGES) */}
+        {/* ============================================================ */}
+        {activeTab === 'packages' && (
+          <div className="space-y-6">
+            {/* Toolbar for Packages */}
+            <div className="bg-[#141A29] border border-white/10 rounded-2xl p-4 sm:p-5 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+              {/* Category Filter Tabs */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+                <button
+                  onClick={() => setPackageCategoryFilter('all')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${
+                    packageCategoryFilter === 'all'
+                      ? 'bg-white text-zinc-900 shadow-md'
+                      : 'bg-white/5 text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  Tất cả ({packages.length})
+                </button>
+                {categories.map((cat) => {
+                  const count = packages.filter((p) => p.categoryKey === cat.key).length;
+                  return (
+                    <button
+                      key={cat._id}
+                      onClick={() => setPackageCategoryFilter(cat.key)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${
+                        packageCategoryFilter === cat.key
+                          ? 'bg-[#FF6320] text-white shadow-md shadow-orange-500/25'
+                          : 'bg-white/5 text-zinc-300 hover:text-white'
+                      }`}
+                    >
+                      {cat.name.split('.')[1] || cat.name} ({count})
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Action: Add Package Button */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => fetchPackagesAndCategories()}
+                  className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white text-xs font-semibold cursor-pointer"
+                  title="Làm mới gói cước"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isPackageLoading ? 'animate-spin' : ''}`} />
+                </button>
+
+                <button
+                  onClick={handleOpenNewPackage}
+                  className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#FF6320] to-[#FFA153] hover:brightness-105 active:scale-95 text-white text-xs sm:text-sm font-extrabold shadow-lg shadow-orange-500/25 flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>+ Thêm Gói Cước Mới</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Packages Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {filteredPackages.map((pkg) => {
+                const categoryObj = categories.find((c) => c.key === pkg.categoryKey);
+                return (
+                  <div
+                    key={pkg._id}
+                    className={`rounded-2xl bg-[#151D2C] border transition-all relative flex flex-col justify-between overflow-hidden shadow-xl ${
+                      pkg.isActive
+                        ? pkg.isPopular
+                          ? 'border-[#FF6320] shadow-orange-500/10'
+                          : 'border-white/10 hover:border-white/20'
+                        : 'border-zinc-800 opacity-60'
+                    }`}
+                  >
+                    {/* Top Tag & Active status */}
+                    <div className="p-5 pb-0">
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-white/10 text-zinc-300">
+                          {categoryObj?.name.split('.')[0] || pkg.categoryKey}
+                        </span>
+
+                        <div className="flex items-center gap-1.5">
+                          {pkg.isPopular && (
+                            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 border border-red-500/30">
+                              HOT
+                            </span>
+                          )}
+                          <button
+                            onClick={() => handleTogglePackageActive(pkg)}
+                            className={`p-1 rounded-md text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer ${
+                              pkg.isActive
+                                ? 'text-emerald-400 hover:text-emerald-300'
+                                : 'text-zinc-500 hover:text-zinc-400'
+                            }`}
+                            title={pkg.isActive ? 'Gói đang hiển thị - Nhấn để ẩn' : 'Gói đang ẩn - Nhấn để hiện'}
+                          >
+                            {pkg.isActive ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                            <span className="text-[10px]">{pkg.isActive ? 'Hiện' : 'Ẩn'}</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Package Name & Speed */}
+                      <h3 className="text-xl font-black text-white">{pkg.name}</h3>
+                      <div className="text-xs text-orange-400 font-semibold flex items-center gap-1.5 mt-1">
+                        <Gauge className="w-3.5 h-3.5 shrink-0" />
+                        <span>{pkg.speed}</span>
+                      </div>
+
+                      {/* Price Banner */}
+                      <div className="mt-4 pt-3 border-t border-white/10 flex items-baseline gap-2">
+                        <span className="text-2xl font-black text-white font-mono">{pkg.price}</span>
+                        <span className="text-xs text-zinc-400">/tháng</span>
+                        {pkg.originalPrice && (
+                          <span className="text-xs text-zinc-500 line-through font-mono">
+                            {pkg.originalPrice}
+                          </span>
+                        )}
+                      </div>
+
+                      {pkg.suitableFor && (
+                        <p className="text-[11px] text-zinc-400 mt-2 italic line-clamp-2">
+                          &bull; {pkg.suitableFor}
+                        </p>
+                      )}
+
+                      {/* Features preview */}
+                      <div className="mt-4 space-y-1.5 border-t border-white/5 pt-3">
+                        {pkg.features.slice(0, 3).map((feat, i) => (
+                          <div key={i} className="text-xs text-zinc-300 flex items-start gap-1.5">
+                            <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                            <span className="line-clamp-1">{feat}</span>
+                          </div>
+                        ))}
+                        {pkg.features.length > 3 && (
+                          <div className="text-[11px] text-zinc-500 pl-5">
+                            + {pkg.features.length - 3} tính năng khác
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Bottom Action Buttons */}
+                    <div className="p-4 mt-5 bg-black/20 border-t border-white/5 flex items-center justify-between">
+                      <span className="text-[11px] text-zinc-500 font-mono">Thứ tự: {pkg.order}</span>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleOpenEditPackage(pkg)}
+                          className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                          <Edit3 className="w-3 h-3" />
+                          <span>Sửa</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleDeletePackage(pkg)}
+                          className="p-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors cursor-pointer"
+                          title="Xóa gói cước này"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================ */}
+        {/* TAB 3: QUẢN LÝ ĐẦU MỤC GÓI CƯỚC (CATEGORIES) */}
+        {/* ============================================================ */}
+        {activeTab === 'categories' && (
+          <div className="space-y-6">
+            <div className="bg-[#141A29] border border-white/10 rounded-2xl p-4 sm:p-5 shadow-md flex items-center justify-between">
+              <div>
+                <h2 className="font-bold text-white text-base">Danh Sách Đầu Mục Gói Cước</h2>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  Phân loại các nhóm gói cước chính hiển thị các tab ngoài trang chủ
+                </p>
+              </div>
+
+              <button
+                onClick={handleOpenNewCategory}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#FF6320] to-[#FFA153] hover:brightness-105 active:scale-95 text-white text-xs sm:text-sm font-extrabold shadow-lg shadow-orange-500/25 flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>+ Thêm Đầu Mục</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+              {categories.map((cat) => (
+                <div
+                  key={cat._id}
+                  className="rounded-2xl bg-[#151D2C] border border-white/10 p-5 shadow-xl flex flex-col justify-between"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="w-10 h-10 rounded-xl bg-orange-500/20 text-[#FFA153] flex items-center justify-center">
+                        {cat.icon === 'Tv' ? (
+                          <Tv className="w-5 h-5" />
+                        ) : cat.icon === 'Building2' ? (
+                          <Building2 className="w-5 h-5" />
+                        ) : (
+                          <Wifi className="w-5 h-5" />
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-white/5 text-zinc-400">
+                          Thứ tự: {cat.order}
+                        </span>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            cat.isActive
+                              ? 'bg-emerald-500/20 text-emerald-300'
+                              : 'bg-zinc-700 text-zinc-400'
+                          }`}
+                        >
+                          {cat.isActive ? 'Kích hoạt' : 'Tạm ẩn'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-[11px] font-mono text-[#FFA153] uppercase font-bold">
+                        Key: {cat.key}
+                      </div>
+                      <h3 className="text-base font-bold text-white mt-0.5">{cat.name}</h3>
+                      <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                        {cat.description || 'Không có mô tả'}
+                      </p>
+                    </div>
+
+                    <div className="pt-2 border-t border-white/5 text-xs text-zinc-300 font-semibold flex items-center gap-2">
+                      <Layers className="w-3.5 h-3.5 text-blue-400" />
+                      <span>{cat.packageCount ?? 0} gói cước thuộc nhóm này</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 pt-4 border-t border-white/10 flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => handleOpenEditCategory(cat)}
+                      className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Edit3 className="w-3 h-3" />
+                      <span>Sửa</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleDeleteCategory(cat)}
+                      className="p-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors cursor-pointer"
+                      title="Xóa đầu mục này"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+      </main>
+
+      {/* ============================================================ */}
+      {/* MODAL 1: CHI TIẾT & GHI CHÚ KHÁCH HÀNG (LEAD DETAIL) */}
+      {/* ============================================================ */}
+      {selectedLead && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in">
+          <div className="relative w-full max-w-lg bg-[#182030] border border-white/15 rounded-3xl p-6 shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-[#FF6320]/20 text-[#FFA153] flex items-center justify-center">
+                  <Edit3 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white text-base">Chi Tiết Đơn Đăng Ký</h3>
+                  <div className="text-[11px] text-zinc-400">ID: {selectedLead._id}</div>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedLead(null)}
+                className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-xs bg-black/40 p-4 rounded-2xl border border-white/10">
+              <div>
+                <span className="text-zinc-400">Khách hàng:</span>
+                <p className="font-bold text-white text-sm mt-0.5">{selectedLead.name}</p>
+              </div>
+              <div>
+                <span className="text-zinc-400">Số điện thoại:</span>
+                <p className="font-bold text-[#FFA153] font-mono text-sm mt-0.5 flex items-center gap-2">
+                  <span>{selectedLead.phone}</span>
+                  <a
+                    href={`tel:${selectedLead.phone}`}
+                    className="text-emerald-400 hover:underline inline-flex items-center gap-1"
+                  >
+                    <Phone className="w-3 h-3" /> Gọi
+                  </a>
+                </p>
+              </div>
+              <div>
+                <span className="text-zinc-400">Khu vực:</span>
+                <p className="font-semibold text-zinc-200 mt-0.5">{selectedLead.province || 'Chưa rõ'}</p>
+              </div>
+              <div>
+                <span className="text-zinc-400">Gói cước:</span>
+                <p className="font-semibold text-zinc-200 mt-0.5">{selectedLead.packageInterest}</p>
+              </div>
+              <div>
+                <span className="text-zinc-400">Nguồn:</span>
+                <p className="font-semibold text-zinc-300 mt-0.5">{selectedLead.source || 'Website'}</p>
+              </div>
+              <div>
+                <span className="text-zinc-400">Thời gian:</span>
+                <p className="font-semibold text-zinc-300 mt-0.5">
+                  {new Date(selectedLead.createdAt).toLocaleString('vi-VN')}
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-zinc-300 mb-2">Trạng thái xử lý:</label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditStatus('pending')}
+                  className={`p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                    editStatus === 'pending'
+                      ? 'bg-amber-500/25 border-amber-500 text-amber-300 shadow-md'
+                      : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  Chờ gọi
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditStatus('contacted')}
+                  className={`p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                    editStatus === 'contacted'
+                      ? 'bg-blue-500/25 border-blue-500 text-blue-300 shadow-md'
+                      : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  Đã gọi tư vấn
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditStatus('completed')}
+                  className={`p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                    editStatus === 'completed'
+                      ? 'bg-emerald-500/25 border-emerald-500 text-emerald-300 shadow-md'
+                      : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  Đã lắp đặt
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-zinc-300 mb-1.5">Ghi chú nội bộ:</label>
+              <textarea
+                rows={3}
+                value={editNote}
+                onChange={(e) => setEditNote(e.target.value)}
+                placeholder="Ghi chú lịch hẹn, địa chỉ lắp đặt hoặc yêu cầu của khách..."
+                className="w-full p-3 rounded-xl bg-black/40 border border-white/15 text-white placeholder-zinc-500 text-xs sm:text-sm focus:outline-none focus:border-[#FF6320] focus:ring-1 focus:ring-[#FF6320]"
+              />
+            </div>
+
+            <div className="flex items-center justify-between pt-2">
+              <button
+                type="button"
+                onClick={(e) => handleDeleteLead(selectedLead._id, selectedLead.name, e)}
+                className="px-3.5 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Xóa đơn này</span>
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedLead(null)}
+                  className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 text-xs font-semibold cursor-pointer"
+                >
+                  Đóng
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveLeadModal}
+                  disabled={isSavingLead}
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-[#FF6320] to-[#FFA153] hover:brightness-105 active:scale-[0.99] text-white text-xs font-bold shadow-md shadow-orange-500/25 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {isSavingLead ? 'Đang lưu...' : 'Lưu Thay Đổi'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* MODAL 2: THÊM / SỬA GÓI CƯỚC (PACKAGE MODAL) */}
+      {/* ============================================================ */}
+      {isPkgModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-sm animate-in fade-in overflow-y-auto">
+          <div className="relative w-full max-w-2xl bg-[#182030] border border-white/15 rounded-3xl p-6 shadow-2xl space-y-5 my-8">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-[#FF6320]/20 text-[#FFA153] flex items-center justify-center">
+                  <Layers className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white text-base">
+                    {editingPkgId ? 'Chỉnh Sửa Gói Cước' : 'Thêm Gói Cước Mới'}
+                  </h3>
+                  <p className="text-[11px] text-zinc-400">
+                    Cập nhật thông tin gói cước hiển thị trên trang chủ
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsPkgModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSavePackage} className="space-y-4">
+              {/* Row 1: Name & Category */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-300 mb-1">
+                    Tên gói cước <span className="text-[#FF6320]">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={pkgName}
+                    onChange={(e) => setPkgName(e.target.value)}
+                    placeholder="Ví dụ: Gói Sky hoặc Combo Sky..."
+                    className="w-full h-10 px-3.5 rounded-xl bg-black/40 border border-white/15 text-white text-xs sm:text-sm focus:outline-none focus:border-[#FF6320]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-300 mb-1">
+                    Đầu mục gói cước <span className="text-[#FF6320]">*</span>
+                  </label>
+                  <select
+                    value={pkgCategoryKey}
+                    onChange={(e) => setPkgCategoryKey(e.target.value)}
+                    className="w-full h-10 px-3 rounded-xl bg-black/40 border border-white/15 text-white text-xs sm:text-sm focus:outline-none focus:border-[#FF6320]"
+                  >
+                    {categories.map((c) => (
+                      <option key={c._id} value={c.key} className="bg-zinc-900">
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Row 2: Speed, Price, Original Price */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-300 mb-1">
+                    Tốc độ băng thông <span className="text-[#FF6320]">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={pkgSpeed}
+                    onChange={(e) => setPkgSpeed(e.target.value)}
+                    placeholder="VD: 1 Gbps / 300 Mbps"
+                    className="w-full h-10 px-3.5 rounded-xl bg-black/40 border border-white/15 text-white text-xs sm:text-sm focus:outline-none focus:border-[#FF6320]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-300 mb-1">
+                    Giá cước khuyến mãi <span className="text-[#FF6320]">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={pkgPrice}
+                    onChange={(e) => setPkgPrice(e.target.value)}
+                    placeholder="VD: 225.000đ"
+                    className="w-full h-10 px-3.5 rounded-xl bg-black/40 border border-white/15 text-white text-xs sm:text-sm focus:outline-none focus:border-[#FF6320]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-300 mb-1">
+                    Giá gốc trước giảm
+                  </label>
+                  <input
+                    type="text"
+                    value={pkgOriginalPrice}
+                    onChange={(e) => setPkgOriginalPrice(e.target.value)}
+                    placeholder="VD: 320.000đ"
+                    className="w-full h-10 px-3.5 rounded-xl bg-black/40 border border-white/15 text-white text-xs sm:text-sm focus:outline-none focus:border-[#FF6320]"
+                  />
+                </div>
+              </div>
+
+              {/* Row 3: Tag, Theme, Suitable For */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-300 mb-1">Huy hiệu (Tag)</label>
+                  <input
+                    type="text"
+                    value={pkgTag}
+                    onChange={(e) => setPkgTag(e.target.value)}
+                    placeholder="VD: BÁN CHẠY NHẤT, TIẾT KIỆM..."
+                    className="w-full h-10 px-3.5 rounded-xl bg-black/40 border border-white/15 text-white text-xs sm:text-sm focus:outline-none focus:border-[#FF6320]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-300 mb-1">Tông màu (Theme)</label>
+                  <select
+                    value={pkgTheme}
+                    onChange={(e) => setPkgTheme(e.target.value as any)}
+                    className="w-full h-10 px-3 rounded-xl bg-black/40 border border-white/15 text-white text-xs sm:text-sm focus:outline-none focus:border-[#FF6320]"
+                  >
+                    <option value="orange" className="bg-zinc-900">🟠 Cam Hỏa Tiễn (Orange)</option>
+                    <option value="red" className="bg-zinc-900">🔴 Đỏ Rực Rỡ (Red)</option>
+                    <option value="purple" className="bg-zinc-900">🟣 Tím Hoàng Gia (Purple)</option>
+                    <option value="slate" className="bg-zinc-900">🔘 Xám Titan / Gaming (Slate)</option>
+                    <option value="emerald" className="bg-zinc-900">🟢 Xanh Lục Bảo (Emerald)</option>
+                    <option value="blue" className="bg-zinc-900">🔵 Xanh Đại Dương / Công Nghệ (Blue)</option>
+                    <option value="cyan" className="bg-zinc-900">💠 Xanh Cyan Siêu Tốc (Cyan)</option>
+                    <option value="amber" className="bg-zinc-900">🟡 Vàng Hoàng Kim (Amber)</option>
+                    <option value="rose" className="bg-zinc-900">🌸 Hồng Ruby (Rose)</option>
+                    <option value="indigo" className="bg-zinc-900">🌌 Xanh Chàm Dạ Quang (Indigo)</option>
+                    <option value="teal" className="bg-zinc-900">🦚 Xanh Mòng Két (Teal)</option>
+                    <option value="dark" className="bg-zinc-900">⚫ Đen Carbon VIP (Dark)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-300 mb-1">Thứ tự &amp; Hiển thị</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      value={pkgOrder}
+                      onChange={(e) => setPkgOrder(Number(e.target.value))}
+                      className="w-20 h-10 px-3 rounded-xl bg-black/40 border border-white/15 text-white text-xs sm:text-sm text-center"
+                      title="Thứ tự hiển thị"
+                    />
+                    <label className="flex items-center gap-1.5 text-xs text-zinc-300 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={pkgIsActive}
+                        onChange={(e) => setPkgIsActive(e.target.checked)}
+                        className="rounded accent-[#FF6320]"
+                      />
+                      <span>Hiện trên web</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-300 mb-1">Đối tượng phù hợp</label>
+                <input
+                  type="text"
+                  value={pkgSuitableFor}
+                  onChange={(e) => setPkgSuitableFor(e.target.value)}
+                  placeholder="VD: Hộ gia đình 5 - 10 thiết bị, xem phim 4K, video call..."
+                  className="w-full h-10 px-3.5 rounded-xl bg-black/40 border border-white/15 text-white text-xs sm:text-sm focus:outline-none focus:border-[#FF6320]"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <label className="flex items-center gap-2 text-xs font-bold text-[#FFA153] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={pkgIsPopular}
+                    onChange={(e) => setPkgIsPopular(e.target.checked)}
+                    className="w-4 h-4 rounded accent-[#FF6320]"
+                  />
+                  <span>Đánh dấu là gói Bán chạy nhất / Nổi bật</span>
+                </label>
+              </div>
+
+              {/* Dynamic Feature Lines */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-semibold text-zinc-300">
+                    Danh sách đặc quyền / Tính năng gói cước ({pkgFeatures.length})
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleAddFeatureLine}
+                    className="text-xs text-[#FFA153] hover:underline flex items-center gap-1 font-bold cursor-pointer"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>Thêm dòng tính năng</span>
+                  </button>
+                </div>
+
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                  {pkgFeatures.map((feat, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={feat}
+                        onChange={(e) => handleUpdateFeatureLine(index, e.target.value)}
+                        placeholder={`Tính năng ${index + 1}...`}
+                        className="flex-1 h-9 px-3 rounded-lg bg-black/40 border border-white/15 text-white text-xs focus:outline-none focus:border-[#FF6320]"
+                      />
+                      {pkgFeatures.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFeatureLine(index)}
+                          className="w-8 h-8 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 flex items-center justify-center cursor-pointer"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setIsPkgModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 text-xs font-semibold cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingPkg}
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#FF6320] to-[#FFA153] hover:brightness-105 active:scale-95 text-white text-xs sm:text-sm font-bold shadow-lg shadow-orange-500/25 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {isSavingPkg ? 'Đang lưu...' : editingPkgId ? 'Cập Nhật Gói Cước' : 'Thêm Gói Cước'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* MODAL 3: THÊM / SỬA ĐẦU MỤC (CATEGORY MODAL) */}
+      {/* ============================================================ */}
+      {isCatModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="relative w-full max-w-md bg-[#182030] border border-white/15 rounded-3xl p-6 shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-[#FF6320]/20 text-[#FFA153] flex items-center justify-center">
+                  <FolderOpen className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white text-base">
+                    {editingCatId ? 'Sửa Đầu Mục Gói Cước' : 'Thêm Đầu Mục Mới'}
+                  </h3>
+                  <p className="text-[11px] text-zinc-400">Quản lý nhóm gói cước hiển thị trên trang chủ</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsCatModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveCategory} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-zinc-300 mb-1">
+                  Mã định danh (Key) <span className="text-[#FF6320]">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  disabled={Boolean(editingCatId)}
+                  value={catKey}
+                  onChange={(e) => setCatKey(e.target.value)}
+                  placeholder="Ví dụ: personal, combo, business..."
+                  className="w-full h-10 px-3.5 rounded-xl bg-black/40 border border-white/15 text-white text-xs sm:text-sm focus:outline-none focus:border-[#FF6320] disabled:opacity-50 font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-300 mb-1">
+                  Tên đầu mục hiển thị <span className="text-[#FF6320]">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={catName}
+                  onChange={(e) => setCatName(e.target.value)}
+                  placeholder="Ví dụ: 1. Gói Internet Cá Nhân & Hộ Gia Đình..."
+                  className="w-full h-10 px-3.5 rounded-xl bg-black/40 border border-white/15 text-white text-xs sm:text-sm focus:outline-none focus:border-[#FF6320]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-300 mb-1">Mô tả ngắn</label>
+                <textarea
+                  rows={2}
+                  value={catDescription}
+                  onChange={(e) => setCatDescription(e.target.value)}
+                  placeholder="Mô tả tóm tắt lợi ích của nhóm gói cước này..."
+                  className="w-full p-3 rounded-xl bg-black/40 border border-white/15 text-white text-xs sm:text-sm focus:outline-none focus:border-[#FF6320]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-300 mb-1">Biểu tượng (Icon)</label>
+                  <select
+                    value={catIcon}
+                    onChange={(e) => setCatIcon(e.target.value)}
+                    className="w-full h-10 px-3 rounded-xl bg-black/40 border border-white/15 text-white text-xs sm:text-sm focus:outline-none focus:border-[#FF6320]"
+                  >
+                    <option value="Wifi" className="bg-zinc-900">Wifi</option>
+                    <option value="Tv" className="bg-zinc-900">Tv (Truyền hình)</option>
+                    <option value="Building2" className="bg-zinc-900">Building (Doanh nghiệp)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-300 mb-1">Thứ tự sắp xếp</label>
+                  <input
+                    type="number"
+                    value={catOrder}
+                    onChange={(e) => setCatOrder(Number(e.target.value))}
+                    className="w-full h-10 px-3 rounded-xl bg-black/40 border border-white/15 text-white text-xs sm:text-sm text-center"
+                  />
+                </div>
+              </div>
+
+              <label className="flex items-center gap-2 text-xs font-bold text-zinc-300 cursor-pointer pt-1">
+                <input
+                  type="checkbox"
+                  checked={catIsActive}
+                  onChange={(e) => setCatIsActive(e.target.checked)}
+                  className="w-4 h-4 rounded accent-[#FF6320]"
+                />
+                <span>Kích hoạt đầu mục này trên website</span>
+              </label>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setIsCatModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 text-xs font-semibold cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingCat}
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#FF6320] to-[#FFA153] hover:brightness-105 active:scale-95 text-white text-xs sm:text-sm font-bold shadow-lg shadow-orange-500/25 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {isSavingCat ? 'Đang lưu...' : editingCatId ? 'Cập Nhật Đầu Mục' : 'Thêm Đầu Mục'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
