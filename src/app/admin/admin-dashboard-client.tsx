@@ -44,8 +44,16 @@ import {
   AlertCircle,
   Lock,
   KeyRound,
+  Activity,
+  Radio,
+  Bookmark,
+  ArrowRight,
+  ShieldCheck,
+  CheckCircle,
 } from 'lucide-react';
 import Link from 'next/link';
+import { PixelPreset } from '@/lib/tracking-config';
+import { CapiLogItem, CapiStats } from '@/app/api/admin/tracking/logs/route';
 
 export interface LeadItem {
   _id: string;
@@ -91,18 +99,18 @@ export interface PackageData {
   isPopular: boolean;
   tag?: string;
   theme:
-    | 'orange'
-    | 'red'
-    | 'purple'
-    | 'slate'
-    | 'emerald'
-    | 'blue'
-    | 'cyan'
-    | 'amber'
-    | 'rose'
-    | 'indigo'
-    | 'teal'
-    | 'dark';
+  | 'orange'
+  | 'red'
+  | 'purple'
+  | 'slate'
+  | 'emerald'
+  | 'blue'
+  | 'cyan'
+  | 'amber'
+  | 'rose'
+  | 'indigo'
+  | 'teal'
+  | 'dark';
   suitableFor: string;
   features: string[];
   order: number;
@@ -128,7 +136,7 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
   const router = useRouter();
 
   // Top Tabs
-  const [activeTab, setActiveTab] = useState<'leads' | 'packages' | 'categories' | 'settings'>('leads');
+  const [activeTab, setActiveTab] = useState<'leads' | 'packages' | 'categories' | 'tracking' | 'settings'>('leads');
 
   // Leads State
   const [leads, setLeads] = useState<LeadItem[]>([]);
@@ -326,6 +334,27 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
     details?: any;
   } | null>(null);
 
+  // Meta Pixel & CAPI Extended State (Monitoring & Presets)
+  const [trackingPresets, setTrackingPresets] = useState<PixelPreset[]>([]);
+  const [trackingLogs, setTrackingLogs] = useState<CapiLogItem[]>([]);
+  const [trackingStats, setTrackingStats] = useState<CapiStats>({
+    totalEvents: 0,
+    leadEvents: 0,
+    contactEvents: 0,
+    completedEvents: 0,
+    successfulEvents: 0,
+    failedEvents: 0,
+    successRate: 100,
+  });
+  const [isLogsLoading, setIsLogsLoading] = useState(false);
+  const [logFilter, setLogFilter] = useState<'all' | 'Lead' | 'Contact' | 'CompleteRegistration' | 'failed'>('all');
+  const [logSearch, setLogSearch] = useState('');
+  const [selectedLog, setSelectedLog] = useState<CapiLogItem | null>(null);
+  const [newPresetName, setNewPresetName] = useState('');
+  const [isAddingPresetModal, setIsAddingPresetModal] = useState(false);
+  const [presetSuccessMsg, setPresetSuccessMsg] = useState<string | null>(null);
+  const [copiedPixelId, setCopiedPixelId] = useState(false);
+
   const fetchTrackingSettings = useCallback(async () => {
     setIsTrackingLoading(true);
     try {
@@ -340,11 +369,32 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
         setTrackingCapiToken(data.data.capiToken || '');
         setTrackingTestEventCode(data.data.testEventCode || '');
         setTrackingIsEnabled(Boolean(data.data.isEnabled));
+        setTrackingPresets(data.data.presets || []);
       }
     } catch (err) {
       console.error('Lỗi tải cấu hình tracking:', err);
     } finally {
       setIsTrackingLoading(false);
+    }
+  }, [router]);
+
+  const fetchTrackingLogs = useCallback(async () => {
+    setIsLogsLoading(true);
+    try {
+      const res = await fetch('/api/admin/tracking/logs');
+      if (res.status === 401) {
+        router.push('/admin/login');
+        return;
+      }
+      const json = await res.json();
+      if (json.success && json.data) {
+        if (json.data.stats) setTrackingStats(json.data.stats);
+        if (json.data.logs) setTrackingLogs(json.data.logs);
+      }
+    } catch (err) {
+      console.error('Lỗi tải nhật ký tracking CAPI:', err);
+    } finally {
+      setIsLogsLoading(false);
     }
   }, [router]);
 
@@ -385,6 +435,13 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
       fetchAdminProfile();
     }
   }, [activeTab, fetchSettings, fetchTrackingSettings, fetchAdminProfile]);
+
+  useEffect(() => {
+    if (activeTab === 'tracking') {
+      fetchTrackingSettings();
+      fetchTrackingLogs();
+    }
+  }, [activeTab, fetchTrackingSettings, fetchTrackingLogs]);
 
   const handleSaveAdminProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -454,6 +511,7 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
           capiToken: trackingCapiToken,
           testEventCode: trackingTestEventCode,
           isEnabled: trackingIsEnabled,
+          presets: trackingPresets,
         }),
       });
       const data = await res.json();
@@ -466,6 +524,140 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
     } catch (err) {
       console.error('Lỗi khi lưu cấu hình tracking:', err);
       alert('Đã xảy ra lỗi kết nối');
+    } finally {
+      setIsSavingTracking(false);
+    }
+  };
+
+  // Áp dụng Preset (1-Click Switch Pixel)
+  const handleApplyPreset = async (preset: PixelPreset) => {
+    if (
+      !window.confirm(
+        `Bạn có chắc chắn muốn chuyển ngay sang hồ sơ "${preset.name}" (Pixel ID: ${preset.pixelId})?\nToàn bộ lượt truy cập website và sự kiện CAPI sẽ lập tức chuyển sang Pixel này.`
+      )
+    ) {
+      return;
+    }
+
+    setTrackingPixelId(preset.pixelId);
+    setTrackingCapiToken(preset.capiToken);
+    setTrackingTestEventCode(preset.testEventCode || '');
+    setTrackingIsEnabled(true);
+    setIsSavingTracking(true);
+
+    try {
+      const res = await fetch('/api/admin/tracking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pixelId: preset.pixelId,
+          capiToken: preset.capiToken,
+          testEventCode: preset.testEventCode || '',
+          isEnabled: true,
+          presets: trackingPresets,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPresetSuccessMsg(`Đã kích hoạt hồ sơ: "${preset.name}"! Website hiện chạy trên Pixel ID: ${preset.pixelId}`);
+        setTimeout(() => setPresetSuccessMsg(null), 6000);
+      } else {
+        alert(data.error || 'Lỗi khi chuyển đổi Pixel');
+      }
+    } catch (err) {
+      console.error('Lỗi khi chuyển đổi Pixel:', err);
+      alert('Đã xảy ra lỗi kết nối');
+    } finally {
+      setIsSavingTracking(false);
+    }
+  };
+
+  // Lưu cấu hình hiện tại thành Preset mới
+  const handleSaveCurrentAsPreset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPresetName.trim()) {
+      alert('Vui lòng nhập tên nhận diện cho hồ sơ Pixel (VD: Pixel Dự Phòng BM2...)');
+      return;
+    }
+    if (!trackingPixelId.trim()) {
+      alert('Vui lòng nhập Pixel ID trước khi lưu thành hồ sơ');
+      return;
+    }
+
+    const newPreset: PixelPreset = {
+      id: 'preset_' + Date.now(),
+      name: newPresetName.trim(),
+      pixelId: trackingPixelId.trim(),
+      capiToken: trackingCapiToken.trim(),
+      testEventCode: trackingTestEventCode.trim() || undefined,
+      createdAt: new Date().toISOString(),
+    };
+
+    const updatedPresets = [...trackingPresets, newPreset];
+    setIsSavingTracking(true);
+
+    try {
+      const res = await fetch('/api/admin/tracking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pixelId: trackingPixelId,
+          capiToken: trackingCapiToken,
+          testEventCode: trackingTestEventCode,
+          isEnabled: trackingIsEnabled,
+          presets: updatedPresets,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTrackingPresets(updatedPresets);
+        setIsAddingPresetModal(false);
+        setNewPresetName('');
+        setPresetSuccessMsg(`Đã thêm hồ sơ "${newPreset.name}" vào kho Pixel dự phòng thành công!`);
+        setTimeout(() => setPresetSuccessMsg(null), 6000);
+      } else {
+        alert(data.error || 'Lỗi khi lưu hồ sơ Pixel');
+      }
+    } catch (err) {
+      console.error('Lỗi khi lưu hồ sơ Pixel:', err);
+      alert('Lỗi kết nối khi lưu hồ sơ Pixel');
+    } finally {
+      setIsSavingTracking(false);
+    }
+  };
+
+  // Xóa Preset
+  const handleDeletePreset = async (presetId: string, presetName: string) => {
+    if (!window.confirm(`Bạn có chắc muốn xóa hồ sơ Pixel "${presetName}" khỏi kho dự phòng?`)) {
+      return;
+    }
+
+    const updatedPresets = trackingPresets.filter((p) => p.id !== presetId);
+    setIsSavingTracking(true);
+
+    try {
+      const res = await fetch('/api/admin/tracking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pixelId: trackingPixelId,
+          capiToken: trackingCapiToken,
+          testEventCode: trackingTestEventCode,
+          isEnabled: trackingIsEnabled,
+          presets: updatedPresets,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTrackingPresets(updatedPresets);
+        setPresetSuccessMsg(`Đã xóa hồ sơ "${presetName}" khỏi danh sách dự phòng.`);
+        setTimeout(() => setPresetSuccessMsg(null), 4000);
+      } else {
+        alert(data.error || 'Lỗi khi xóa hồ sơ');
+      }
+    } catch (err) {
+      console.error('Lỗi khi xóa hồ sơ:', err);
+      alert('Lỗi kết nối khi xóa hồ sơ');
     } finally {
       setIsSavingTracking(false);
     }
@@ -900,6 +1092,32 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
     return matchCategory && matchSearch;
   });
 
+  // Filtered CAPI Tracking Logs
+  const filteredTrackingLogs = trackingLogs.filter((log) => {
+    if (logFilter === 'failed' && log.success) return false;
+    if (logFilter === 'Lead' && log.eventName !== 'Lead') return false;
+    if (logFilter === 'Contact' && log.eventName !== 'Contact') return false;
+    if (
+      logFilter === 'CompleteRegistration' &&
+      log.eventName !== 'CompleteRegistration' &&
+      log.eventName !== 'Purchase'
+    )
+      return false;
+
+    if (logSearch.trim()) {
+      const q = logSearch.toLowerCase().trim();
+      const matchName = (log.leadName || '').toLowerCase().includes(q);
+      const matchPhone = (log.phone || '').includes(q);
+      const matchEventId = (log.eventId || '').toLowerCase().includes(q);
+      const matchEventName = (log.eventName || '').toLowerCase().includes(q);
+      const matchProvince = (log.province || '').toLowerCase().includes(q);
+      if (!matchName && !matchPhone && !matchEventId && !matchEventName && !matchProvince) {
+        return false;
+      }
+    }
+    return true;
+  });
+
   return (
     <div className="min-h-screen bg-[#0E131F] text-zinc-100 flex flex-col font-sans selection:bg-[#FF6320] selection:text-white">
       {/* 1. Header Bar */}
@@ -970,23 +1188,33 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
         <div className="max-w-7xl mx-auto flex items-center gap-2 sm:gap-4 overflow-x-auto py-2.5 scrollbar-none">
           <button
             onClick={() => setActiveTab('leads')}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === 'leads'
-                ? 'bg-gradient-to-r from-[#FF6320] to-[#FFA153] text-white shadow-lg shadow-orange-500/25'
-                : 'bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white'
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${activeTab === 'leads'
+              ? 'bg-gradient-to-r from-[#FF6320] to-[#FFA153] text-white shadow-lg shadow-orange-500/25'
+              : 'bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white'
+              }`}
           >
             <Users className="w-4 h-4" />
             <span>Khách Hàng Đăng Ký ({stats.total})</span>
           </button>
-
+          <button
+            onClick={() => setActiveTab('tracking')}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${activeTab === 'tracking'
+              ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25'
+              : 'bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white'
+              }`}
+          >
+            <Zap className="w-4 h-4 text-blue-400" />
+            <span>Meta Pixel &amp; CAPI</span>
+            {trackingIsEnabled && trackingPixelId && (
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            )}
+          </button>
           <button
             onClick={() => setActiveTab('packages')}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === 'packages'
-                ? 'bg-gradient-to-r from-[#FF6320] to-[#FFA153] text-white shadow-lg shadow-orange-500/25'
-                : 'bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white'
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${activeTab === 'packages'
+              ? 'bg-gradient-to-r from-[#FF6320] to-[#FFA153] text-white shadow-lg shadow-orange-500/25'
+              : 'bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white'
+              }`}
           >
             <Layers className="w-4 h-4" />
             <span>Quản Lý Gói Cước ({packages.length})</span>
@@ -994,26 +1222,26 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
 
           <button
             onClick={() => setActiveTab('categories')}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === 'categories'
-                ? 'bg-gradient-to-r from-[#FF6320] to-[#FFA153] text-white shadow-lg shadow-orange-500/25'
-                : 'bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white'
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${activeTab === 'categories'
+              ? 'bg-gradient-to-r from-[#FF6320] to-[#FFA153] text-white shadow-lg shadow-orange-500/25'
+              : 'bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white'
+              }`}
           >
             <FolderOpen className="w-4 h-4" />
             <span>Đầu Mục Gói Cước ({categories.length})</span>
           </button>
 
+
+
           <button
             onClick={() => setActiveTab('settings')}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === 'settings'
-                ? 'bg-gradient-to-r from-[#FF6320] to-[#FFA153] text-white shadow-lg shadow-orange-500/25'
-                : 'bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white'
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${activeTab === 'settings'
+              ? 'bg-gradient-to-r from-[#FF6320] to-[#FFA153] text-white shadow-lg shadow-orange-500/25'
+              : 'bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white'
+              }`}
           >
             <Sliders className="w-4 h-4" />
-            <span>Cấu Hình Hotline & Zalo</span>
+            <span>Cấu Hình Trang Web</span>
           </button>
         </div>
       </div>
@@ -1109,42 +1337,38 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
                 <button
                   onClick={() => setLeadStatusFilter('all')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
-                    leadStatusFilter === 'all'
-                      ? 'bg-white text-zinc-900 shadow-md font-bold'
-                      : 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
-                  }`}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${leadStatusFilter === 'all'
+                    ? 'bg-white text-zinc-900 shadow-md font-bold'
+                    : 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
+                    }`}
                 >
                   Tất cả ({stats.total})
                 </button>
                 <button
                   onClick={() => setLeadStatusFilter('pending')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer flex items-center gap-1.5 ${
-                    leadStatusFilter === 'pending'
-                      ? 'bg-amber-500 text-zinc-950 font-bold shadow-md shadow-amber-500/20'
-                      : 'bg-amber-500/10 text-amber-300 hover:bg-amber-500/20'
-                  }`}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer flex items-center gap-1.5 ${leadStatusFilter === 'pending'
+                    ? 'bg-amber-500 text-zinc-950 font-bold shadow-md shadow-amber-500/20'
+                    : 'bg-amber-500/10 text-amber-300 hover:bg-amber-500/20'
+                    }`}
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
                   Chờ gọi ({stats.pending})
                 </button>
                 <button
                   onClick={() => setLeadStatusFilter('contacted')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer flex items-center gap-1.5 ${
-                    leadStatusFilter === 'contacted'
-                      ? 'bg-blue-500 text-white font-bold shadow-md shadow-blue-500/20'
-                      : 'bg-blue-500/10 text-blue-300 hover:bg-blue-500/20'
-                  }`}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer flex items-center gap-1.5 ${leadStatusFilter === 'contacted'
+                    ? 'bg-blue-500 text-white font-bold shadow-md shadow-blue-500/20'
+                    : 'bg-blue-500/10 text-blue-300 hover:bg-blue-500/20'
+                    }`}
                 >
                   Đã gọi ({stats.contacted})
                 </button>
                 <button
                   onClick={() => setLeadStatusFilter('completed')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer flex items-center gap-1.5 ${
-                    leadStatusFilter === 'completed'
-                      ? 'bg-emerald-500 text-white font-bold shadow-md shadow-emerald-500/20'
-                      : 'bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
-                  }`}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer flex items-center gap-1.5 ${leadStatusFilter === 'completed'
+                    ? 'bg-emerald-500 text-white font-bold shadow-md shadow-emerald-500/20'
+                    : 'bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
+                    }`}
                 >
                   Hoàn tất ({stats.completed})
                 </button>
@@ -1410,11 +1634,10 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
                 <button
                   onClick={() => setPackageCategoryFilter('all')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${
-                    packageCategoryFilter === 'all'
-                      ? 'bg-white text-zinc-900 shadow-md'
-                      : 'bg-white/5 text-zinc-400 hover:text-white'
-                  }`}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${packageCategoryFilter === 'all'
+                    ? 'bg-white text-zinc-900 shadow-md'
+                    : 'bg-white/5 text-zinc-400 hover:text-white'
+                    }`}
                 >
                   Tất cả ({packages.length})
                 </button>
@@ -1424,11 +1647,10 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
                     <button
                       key={cat._id}
                       onClick={() => setPackageCategoryFilter(cat.key)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${
-                        packageCategoryFilter === cat.key
-                          ? 'bg-[#FF6320] text-white shadow-md shadow-orange-500/25'
-                          : 'bg-white/5 text-zinc-300 hover:text-white'
-                      }`}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${packageCategoryFilter === cat.key
+                        ? 'bg-[#FF6320] text-white shadow-md shadow-orange-500/25'
+                        : 'bg-white/5 text-zinc-300 hover:text-white'
+                        }`}
                     >
                       {cat.name.split('.')[1] || cat.name} ({count})
                     </button>
@@ -1463,13 +1685,12 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
                 return (
                   <div
                     key={pkg._id}
-                    className={`rounded-2xl bg-[#151D2C] border transition-all relative flex flex-col justify-between overflow-hidden shadow-xl ${
-                      pkg.isActive
-                        ? pkg.isPopular
-                          ? 'border-[#FF6320] shadow-orange-500/10'
-                          : 'border-white/10 hover:border-white/20'
-                        : 'border-zinc-800 opacity-60'
-                    }`}
+                    className={`rounded-2xl bg-[#151D2C] border transition-all relative flex flex-col justify-between overflow-hidden shadow-xl ${pkg.isActive
+                      ? pkg.isPopular
+                        ? 'border-[#FF6320] shadow-orange-500/10'
+                        : 'border-white/10 hover:border-white/20'
+                      : 'border-zinc-800 opacity-60'
+                      }`}
                   >
                     {/* Top Tag & Active status */}
                     <div className="p-5 pb-0">
@@ -1486,11 +1707,10 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
                           )}
                           <button
                             onClick={() => handleTogglePackageActive(pkg)}
-                            className={`p-1 rounded-md text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer ${
-                              pkg.isActive
-                                ? 'text-emerald-400 hover:text-emerald-300'
-                                : 'text-zinc-500 hover:text-zinc-400'
-                            }`}
+                            className={`p-1 rounded-md text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer ${pkg.isActive
+                              ? 'text-emerald-400 hover:text-emerald-300'
+                              : 'text-zinc-500 hover:text-zinc-400'
+                              }`}
                             title={pkg.isActive ? 'Gói đang hiển thị - Nhấn để ẩn' : 'Gói đang ẩn - Nhấn để hiện'}
                           >
                             {pkg.isActive ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
@@ -1613,11 +1833,10 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
                           Thứ tự: {cat.order}
                         </span>
                         <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                            cat.isActive
-                              ? 'bg-emerald-500/20 text-emerald-300'
-                              : 'bg-zinc-700 text-zinc-400'
-                          }`}
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${cat.isActive
+                            ? 'bg-emerald-500/20 text-emerald-300'
+                            : 'bg-zinc-700 text-zinc-400'
+                            }`}
                         >
                           {cat.isActive ? 'Kích hoạt' : 'Tạm ẩn'}
                         </span>
@@ -1905,203 +2124,6 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
             {/* ============================================================ */}
             {/* CARD 2: CẤU HÌNH META PIXEL & CONVERSIONS API (CAPI) */}
             {/* ============================================================ */}
-            <div className="bg-[#141A29] border border-white/10 rounded-3xl p-6 shadow-xl space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center shrink-0 mt-0.5">
-                    <Zap className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                      <span>Cấu Hình Meta Pixel &amp; Conversions API (CAPI)</span>
-                      <span className="text-[10px] uppercase px-2 py-0.5 rounded-full font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                        Facebook Ads 2026
-                      </span>
-                    </h3>
-                    <p className="text-xs text-zinc-400 mt-1">
-                      Đo lường chuyển đổi kép (Client Pixel + Server CAPI) tối ưu hóa chi phí quảng cáo Facebook Ads, theo dõi vòng đời khách hàng và chống trùng lặp (Deduplication).
-                    </p>
-                  </div>
-                </div>
-
-                {/* Tracking Enabled Switch */}
-                <label className="flex items-center gap-2.5 p-2.5 rounded-2xl bg-black/40 border border-white/10 cursor-pointer self-start sm:self-auto hover:bg-black/60 transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={trackingIsEnabled}
-                    onChange={(e) => setTrackingIsEnabled(e.target.checked)}
-                    className="w-5 h-5 rounded accent-blue-500 cursor-pointer"
-                  />
-                  <div className="text-xs">
-                    <div className={`font-bold ${trackingIsEnabled ? 'text-emerald-400' : 'text-zinc-400'}`}>
-                      {trackingIsEnabled ? 'Đang Kích Hoạt' : 'Đang Tắt Tracking'}
-                    </div>
-                    <div className="text-[10px] text-zinc-500">Pixel &amp; CAPI</div>
-                  </div>
-                </label>
-              </div>
-
-              {trackingSavedSuccess && (
-                <div className="p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 flex items-center gap-3 animate-in fade-in">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-                  <div className="text-xs sm:text-sm font-semibold">
-                    Đã lưu cấu hình Meta Pixel &amp; CAPI thành công! Hệ thống sẵn sàng ghi nhận chuyển đổi.
-                  </div>
-                </div>
-              )}
-
-              {testCapiResult && (
-                <div
-                  className={`p-4 rounded-2xl border flex items-start gap-3 animate-in fade-in ${
-                    testCapiResult.success
-                      ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
-                      : 'bg-red-500/15 border-red-500/40 text-red-300'
-                  }`}
-                >
-                  {testCapiResult.success ? (
-                    <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-                  ) : (
-                    <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
-                  )}
-                  <div className="text-xs space-y-1">
-                    <div className="font-bold">{testCapiResult.message}</div>
-                    {testCapiResult.details && (
-                      <pre className="text-[11px] font-mono bg-black/40 p-2 rounded-lg mt-1 overflow-x-auto">
-                        {JSON.stringify(testCapiResult.details, null, 2)}
-                      </pre>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <form onSubmit={handleSaveTrackingSettings} className="space-y-5">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  {/* Pixel ID */}
-                  <div>
-                    <label className="block text-xs font-bold text-white mb-1.5 flex items-center justify-between">
-                      <span>Meta Pixel ID (Dataset ID)</span>
-                      <span className="text-zinc-500 font-normal text-[11px]">Bắt buộc để gắn Pixel</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={trackingPixelId}
-                      onChange={(e) => setTrackingPixelId(e.target.value)}
-                      placeholder="Ví dụ: 1234567890123456"
-                      className="w-full h-11 px-3.5 rounded-xl bg-black/40 border border-white/15 text-white font-mono text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                    />
-                    <span className="text-[11px] text-zinc-400 mt-1 block">
-                      Lấy tại: Meta Events Manager (Trình quản lý sự kiện) &gt; Cài đặt &gt; ID Tập dữ liệu / Pixel ID.
-                    </span>
-                  </div>
-
-                  {/* Test Event Code */}
-                  <div>
-                    <label className="block text-xs font-bold text-white mb-1.5 flex items-center justify-between">
-                      <span>Mã Thử Nghiệm Sự Kiện (Test Event Code)</span>
-                      <span className="text-amber-400 font-normal text-[11px]">Tùy chọn (để test live)</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={trackingTestEventCode}
-                      onChange={(e) => setTrackingTestEventCode(e.target.value)}
-                      placeholder="Ví dụ: TEST12345"
-                      className="w-full h-11 px-3.5 rounded-xl bg-black/40 border border-white/15 text-white font-mono text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-                    />
-                    <span className="text-[11px] text-zinc-400 mt-1 block">
-                      Lấy tại tab <strong>Thử nghiệm sự kiện</strong> trên Meta Events Manager. Nhập mã này để thấy sự kiện xuất hiện tức thời trên màn hình test của Facebook.
-                    </span>
-                  </div>
-                </div>
-
-                {/* CAPI Access Token */}
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-bold text-white">
-                      Meta CAPI Access Token (Mã truy cập API chuyển đổi)
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setShowCapiToken(!showCapiToken)}
-                      className="text-[11px] text-blue-400 hover:text-blue-300 flex items-center gap-1 cursor-pointer"
-                    >
-                      {showCapiToken ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                      <span>{showCapiToken ? 'Ẩn token' : 'Hiện token'}</span>
-                    </button>
-                  </div>
-                  <textarea
-                    rows={2}
-                    value={trackingCapiToken}
-                    onChange={(e) => setTrackingCapiToken(e.target.value)}
-                    placeholder="Dán token bắt đầu bằng EAAG... (Tạo tại Trình quản lý sự kiện > Cài đặt > API chuyển đổi > Tạo mã truy cập)"
-                    className="w-full p-3 rounded-xl bg-black/40 border border-white/15 text-white font-mono text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  />
-                  <span className="text-[11px] text-zinc-400 mt-1 block">
-                    Token này được bảo mật an toàn trên máy chủ và chỉ dùng để bắn Server CAPI, không bao giờ lộ ra ngoài trình duyệt khách hàng.
-                  </span>
-                </div>
-
-                {/* Workflow Explainer Banner */}
-                <div className="p-4 rounded-2xl bg-black/30 border border-white/5 space-y-2.5">
-                  <div className="text-xs font-bold text-white flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-[#FFA153]" />
-                    <span>Cơ Chế Theo Dõi Trạng Thái Khách Hàng Tự Động (Customer Lifecycle CAPI):</span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-[11px]">
-                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-1">
-                      <div className="font-bold text-amber-400 flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-amber-400" />
-                        <span>1. Khách Gửi Đơn</span>
-                      </div>
-                      <p className="text-zinc-300">
-                        Bắn đồng thời Pixel &amp; CAPI sự kiện <strong>Lead</strong> kèm mã <code>event_id</code> chống trùng lặp.
-                      </p>
-                    </div>
-
-                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-1">
-                      <div className="font-bold text-blue-400 flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-blue-400" />
-                        <span>2. Admin Gọi Tư Vấn</span>
-                      </div>
-                      <p className="text-zinc-300">
-                        Đổi trạng thái sang <em>&quot;Đã gọi&quot;</em> -&gt; Server tự động bắn CAPI sự kiện <strong>Contact</strong>.
-                      </p>
-                    </div>
-
-                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-1">
-                      <div className="font-bold text-emerald-400 flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                        <span>3. Lắp Đặt Hoàn Tất</span>
-                      </div>
-                      <p className="text-zinc-300">
-                        Đổi sang <em>&quot;Đã hoàn tất&quot;</em> -&gt; Server tự động bắn CAPI sự kiện <strong>CompleteRegistration</strong>.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="pt-2 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3">
-                  <button
-                    type="button"
-                    onClick={handleTestCapi}
-                    disabled={isTestingCapi || isSavingTracking}
-                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isTestingCapi ? 'animate-spin' : ''}`} />
-                    <span>{isTestingCapi ? 'Đang gửi test lên Meta...' : 'Bắn Thử Event Test CAPI'}</span>
-                  </button>
-
-                  <button
-                    type="submit"
-                    disabled={isSavingTracking || isTestingCapi}
-                    className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs sm:text-sm font-bold shadow-lg shadow-blue-500/25 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
-                  >
-                    <Save className="w-4 h-4" />
-                    <span>{isSavingTracking ? 'Đang lưu tracking...' : 'Lưu Cấu Hình Pixel & CAPI'}</span>
-                  </button>
-                </div>
-              </form>
-            </div>
 
             {/* ============================================================ */}
             {/* CARD 3: BẢO MẬT & ĐỔI TÀI KHOẢN QUẢN TRỊ VIÊN */}
@@ -2182,9 +2204,6 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
                           {showAdminCurrentPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
-                      <span className="text-[11px] text-zinc-400 mt-1 block">
-                        Nhập mật khẩu hiện tại (mặc định ban đầu: <code>admin123</code>).
-                      </span>
                     </div>
 
                     <div>
@@ -2290,6 +2309,727 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
             </div>
           </div>
         )}
+
+        {/* ============================================================ */}
+        {/* TAB 4: TRUNG TÂM QUẢN LÝ META PIXEL & CAPI (TRACKING) */}
+        {/* ============================================================ */}
+        {activeTab === 'tracking' && (
+          <div className="space-y-6">
+            {/* Header / Sub-banner */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-[#141A29] border border-white/10 rounded-3xl p-5 sm:p-6 shadow-xl">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs uppercase px-2.5 py-0.5 rounded-full font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 flex items-center gap-1.5">
+                    <Zap className="w-3 h-3 text-blue-400" />
+                    Meta Ads Manager 2026
+                  </span>
+                  {trackingIsEnabled && trackingPixelId ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                      Đang phát sóng (Pixel ID: {trackingPixelId})
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-semibold">
+                      <span className="w-2 h-2 rounded-full bg-amber-400" />
+                      Chưa kích hoạt hoặc thiếu Pixel ID
+                    </span>
+                  )}
+                </div>
+                <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                  Trung Tâm Giám Sát &amp; Điều Khiển Meta Pixel / CAPI
+                </h2>
+                <p className="text-xs sm:text-sm text-zinc-400">
+                  Theo dõi dòng sự kiện chuyển đổi thời gian thực, lưu trữ kho Pixel dự phòng và thay đổi Pixel lập tức chỉ với 1-Click.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    fetchTrackingSettings();
+                    fetchTrackingLogs();
+                  }}
+                  disabled={isLogsLoading || isTrackingLoading}
+                  className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                  title="Làm mới trạng thái và nhật ký sự kiện"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isLogsLoading ? 'animate-spin' : ''}`} />
+                  <span>Làm Mới</span>
+                </button>
+
+                <a
+                  href={`https://business.facebook.com/events_manager2/list/dataset/${trackingPixelId || ''}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 hover:text-blue-200 border border-blue-500/30 text-xs font-bold flex items-center gap-2 transition-all"
+                  title="Mở Trình quản lý sự kiện Meta Events Manager"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Meta Events Manager</span>
+                </a>
+              </div>
+            </div>
+
+            {/* KPI Summary Cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+              {/* Card 1: Active Pixel */}
+              <div className="rounded-2xl bg-[#151D2C] border border-white/10 p-4 shadow-lg relative overflow-hidden flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-zinc-400">Pixel Đang Chạy</span>
+                  <div className="w-8 h-8 rounded-xl bg-blue-500/15 text-blue-400 flex items-center justify-center">
+                    <Radio className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm sm:text-base font-black text-white font-mono truncate">
+                      {trackingPixelId || 'Chưa thiết lập'}
+                    </span>
+                    {trackingPixelId && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(trackingPixelId);
+                          setCopiedPixelId(true);
+                          setTimeout(() => setCopiedPixelId(false), 2000);
+                        }}
+                        className="p-1 rounded-md bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white cursor-pointer"
+                        title="Copy Pixel ID"
+                      >
+                        {copiedPixelId ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                      </button>
+                    )}
+                  </div>
+                  <span className={`text-[11px] font-semibold mt-0.5 block ${trackingIsEnabled ? 'text-emerald-400' : 'text-zinc-500'}`}>
+                    {trackingIsEnabled ? '● Đang kích hoạt' : '○ Tạm tắt'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Card 2: Total Dispatched & Success Rate */}
+              <div className="rounded-2xl bg-[#151D2C] border border-white/10 p-4 shadow-lg relative overflow-hidden flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-zinc-400">Tổng Event CAPI</span>
+                  <div className="w-8 h-8 rounded-xl bg-purple-500/15 text-purple-400 flex items-center justify-center">
+                    <Activity className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-2xl font-black text-white">{trackingStats.totalEvents}</div>
+                  <span className="text-[11px] font-semibold text-emerald-400 mt-0.5 block">
+                    {trackingStats.successRate}% gửi thành công
+                  </span>
+                </div>
+              </div>
+
+              {/* Card 3: Lead Events */}
+              <div className="rounded-2xl bg-[#151D2C] border border-white/10 p-4 shadow-lg relative overflow-hidden flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-zinc-400">Chuyển Đổi Lead</span>
+                  <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-2xl font-black text-[#FFA153]">{trackingStats.leadEvents}</div>
+                  <span className="text-[11px] text-zinc-400 mt-0.5 block">Khách đăng ký form</span>
+                </div>
+              </div>
+
+              {/* Card 4: Contact Events */}
+              <div className="rounded-2xl bg-[#151D2C] border border-white/10 p-4 shadow-lg relative overflow-hidden flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-zinc-400">Đã Tư Vấn (Contact)</span>
+                  <div className="w-8 h-8 rounded-xl bg-cyan-500/15 text-cyan-400 flex items-center justify-center">
+                    <PhoneCall className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-2xl font-black text-cyan-400">{trackingStats.contactEvents}</div>
+                  <span className="text-[11px] text-zinc-400 mt-0.5 block">Admin gọi tư vấn</span>
+                </div>
+              </div>
+
+              {/* Card 5: Completed Registrations */}
+              <div className="rounded-2xl bg-[#151D2C] border border-white/10 p-4 shadow-lg relative overflow-hidden col-span-2 lg:col-span-1 flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-zinc-400">Hoàn Tất Lắp Đặt</span>
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
+                    <CheckCircle2 className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="text-2xl font-black text-emerald-400">{trackingStats.completedEvents}</div>
+                  <span className="text-[11px] text-zinc-400 mt-0.5 block">Chốt đơn thành công</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Notification alert banner when a preset or settings is changed */}
+            {presetSuccessMsg && (
+              <div className="p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 flex items-center justify-between gap-3 animate-in fade-in">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                  <div className="text-xs sm:text-sm font-semibold">{presetSuccessMsg}</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPresetSuccessMsg(null)}
+                  className="text-zinc-400 hover:text-white p-1"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
+            {/* 2-Column Grid: Config & Presets */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Left Col (7/12): Active Configuration */}
+              <div className="lg:col-span-7 bg-[#141A29] border border-white/10 rounded-3xl p-5 sm:p-6 shadow-xl space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center shrink-0 mt-0.5">
+                      <Zap className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                        <span>Cấu Hình Pixel &amp; CAPI Đang Hoạt Động</span>
+                      </h3>
+                      <p className="text-xs text-zinc-400 mt-0.5">
+                        Áp dụng trực tiếp vào mã Client Pixel và quy trình bắn Server CAPI
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Tracking toggle switch */}
+                  <label className="flex items-center gap-2.5 p-2 rounded-xl bg-black/40 border border-white/10 cursor-pointer self-start sm:self-auto hover:bg-black/60 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={trackingIsEnabled}
+                      onChange={(e) => setTrackingIsEnabled(e.target.checked)}
+                      className="w-4 h-4 rounded accent-blue-500 cursor-pointer"
+                    />
+                    <div className="text-xs font-bold text-zinc-200">
+                      {trackingIsEnabled ? (
+                        <span className="text-emerald-400">Đang Bật</span>
+                      ) : (
+                        <span className="text-zinc-400">Đang Tắt</span>
+                      )}
+                    </div>
+                  </label>
+                </div>
+
+                <form onSubmit={handleSaveTrackingSettings} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Pixel ID */}
+                    <div>
+                      <label className="block text-xs font-bold text-white mb-1.5 flex items-center justify-between">
+                        <span>Meta Pixel ID (Dataset ID)</span>
+                        <span className="text-red-400 font-semibold">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={trackingPixelId}
+                        onChange={(e) => setTrackingPixelId(e.target.value)}
+                        placeholder="Ví dụ: 1234567890123456"
+                        className="w-full h-11 px-3.5 rounded-xl bg-black/40 border border-white/15 text-white font-mono text-xs sm:text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      />
+                      <span className="text-[10px] text-zinc-400 mt-1 block">
+                        Lấy từ Trình quản lý sự kiện &gt; Cài đặt &gt; ID Tập dữ liệu
+                      </span>
+                    </div>
+
+                    {/* Test Event Code */}
+                    <div>
+                      <label className="block text-xs font-bold text-white mb-1.5 flex items-center justify-between">
+                        <span>Mã Thử Nghiệm (Test Code)</span>
+                        <span className="text-amber-400 text-[10px] font-normal">Tùy chọn test</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={trackingTestEventCode}
+                        onChange={(e) => setTrackingTestEventCode(e.target.value)}
+                        placeholder="Ví dụ: TEST12345"
+                        className="w-full h-11 px-3.5 rounded-xl bg-black/40 border border-white/15 text-white font-mono text-xs sm:text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                      />
+                      <span className="text-[10px] text-zinc-400 mt-1 block">
+                        Xóa mã này khi chạy chiến dịch quảng cáo thực tế
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* CAPI Token */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-bold text-white flex items-center gap-1.5">
+                        <Lock className="w-3.5 h-3.5 text-blue-400" />
+                        <span>CAPI Access Token (Server Token)</span>
+                        <span className="text-red-400 font-semibold">*</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowCapiToken(!showCapiToken)}
+                        className="text-[11px] text-blue-400 hover:text-blue-300 flex items-center gap-1 cursor-pointer"
+                      >
+                        {showCapiToken ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        <span>{showCapiToken ? 'Ẩn' : 'Hiện token'}</span>
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <textarea
+                        rows={2}
+                        value={trackingCapiToken}
+                        onChange={(e) => setTrackingCapiToken(e.target.value)}
+                        placeholder="Dán token bắt đầu bằng EAAG... (Tạo tại Trình quản lý sự kiện > Cài đặt > API chuyển đổi > Tạo mã truy cập)"
+                        className={`w-full p-3 rounded-xl bg-black/40 border border-white/15 text-white font-mono text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 ${!showCapiToken ? 'select-none filter blur-[2.5px] hover:blur-none transition-all' : ''}`}
+                      />
+                    </div>
+                    <span className="text-[10px] text-zinc-400 mt-1 block">
+                      Token bảo mật nghiêm ngặt trên Cloud MongoDB, không lộ ra mã nguồn trình duyệt khách hàng.
+                    </span>
+                  </div>
+
+                  {/* Live CAPI Test Tool Button & Result */}
+                  {testCapiResult && (
+                    <div
+                      className={`p-3.5 rounded-2xl border flex items-start gap-3 animate-in fade-in ${testCapiResult.success
+                        ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                        : 'bg-red-500/15 border-red-500/40 text-red-300'
+                        }`}
+                    >
+                      {testCapiResult.success ? (
+                        <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                      ) : (
+                        <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                      )}
+                      <div className="text-xs space-y-1 overflow-hidden w-full">
+                        <div className="font-bold flex items-center justify-between">
+                          <span>{testCapiResult.message}</span>
+                          <button
+                            type="button"
+                            onClick={() => setTestCapiResult(null)}
+                            className="text-zinc-400 hover:text-white"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        {testCapiResult.details && (
+                          <pre className="text-[10px] font-mono bg-black/50 p-2 rounded-lg mt-1 overflow-x-auto max-h-28 scrollbar-none">
+                            {JSON.stringify(testCapiResult.details, null, 2)}
+                          </pre>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action row */}
+                  <div className="pt-2 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleTestCapi}
+                        disabled={isTestingCapi || isSavingTracking}
+                        className="px-3.5 py-2.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                        title="Bắn một sự kiện Lead mẫu lên Meta Graph API để kiểm tra kết nối"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isTestingCapi ? 'animate-spin' : ''}`} />
+                        <span>{isTestingCapi ? 'Đang gửi...' : 'Bắn Test CAPI'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingPresetModal(true)}
+                        disabled={!trackingPixelId.trim()}
+                        className="px-3.5 py-2.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-40"
+                        title="Lưu cấu hình Pixel & Token hiện tại thành một hồ sơ dự phòng"
+                      >
+                        <Bookmark className="w-3.5 h-3.5" />
+                        <span>+ Lưu Thành Hồ Sơ</span>
+                      </button>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isSavingTracking || isTestingCapi}
+                      className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs sm:text-sm font-bold shadow-lg shadow-blue-500/25 transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50"
+                    >
+                      <Save className="w-4 h-4" />
+                      <span>{isSavingTracking ? 'Đang lưu...' : 'Lưu Thay Đổi Đang Chạy'}</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              {/* Right Col (5/12): Pixel Presets & Fast Swapper */}
+              <div className="lg:col-span-5 bg-[#141A29] border border-white/10 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4 flex flex-col justify-between">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-xl bg-purple-600/20 text-purple-400 flex items-center justify-center shrink-0">
+                        <Bookmark className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-white text-sm sm:text-base">
+                          Kho Hồ Sơ Pixel Dự Phòng
+                        </h3>
+                        <p className="text-[11px] text-zinc-400">
+                          Chuyển đổi Pixel tức thì khi cần đổi tài khoản
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingPresetModal(true)}
+                      className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Thêm</span>
+                    </button>
+                  </div>
+
+                  {/* Fast swap explanation tip */}
+                  <div className="p-3 rounded-2xl bg-black/40 border border-white/5 text-[11px] text-zinc-400 leading-relaxed">
+                    <strong className="text-zinc-200 block mb-0.5">Chuyển đổi 1-Click:</strong>
+                    Khi tài khoản quảng cáo Facebook bị hạn chế hoặc bạn cần đổi Pixel, chỉ cần ấn nút <strong>&quot;Áp Dụng Ngay&quot;</strong> bên dưới để đổi toàn bộ Pixel &amp; CAPI trên website trong 1 giây mà không cần sửa code.
+                  </div>
+
+                  {/* Presets List */}
+                  <div className="space-y-2.5 max-h-[360px] overflow-y-auto pr-1">
+                    {trackingPresets.length === 0 ? (
+                      <div className="p-6 text-center rounded-2xl bg-black/20 border border-dashed border-white/10 space-y-2">
+                        <Bookmark className="w-8 h-8 text-zinc-600 mx-auto" />
+                        <div className="text-xs font-bold text-zinc-400">Chưa có hồ sơ Pixel dự phòng nào</div>
+                        <p className="text-[11px] text-zinc-500">
+                          Hãy lưu cấu hình Pixel hiện tại thành hồ sơ để dễ dàng thay đổi khi cần.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setIsAddingPresetModal(true)}
+                          disabled={!trackingPixelId.trim()}
+                          className="px-3.5 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
+                        >
+                          <Plus className="w-3 h-3" />
+                          <span>Lưu Pixel Hiện Tại Thành Hồ Sơ</span>
+                        </button>
+                      </div>
+                    ) : (
+                      trackingPresets.map((preset) => {
+                        const isActive = preset.pixelId === trackingPixelId;
+                        return (
+                          <div
+                            key={preset.id}
+                            className={`p-3.5 rounded-2xl border transition-all ${isActive
+                              ? 'bg-blue-500/10 border-blue-500/40 shadow-md shadow-blue-500/10'
+                              : 'bg-black/30 border-white/10 hover:border-white/20'
+                              }`}
+                          >
+                            <div className="flex items-center justify-between gap-2 mb-1.5">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-white text-xs">{preset.name}</span>
+                                {isActive && (
+                                  <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                    Đang Chạy
+                                  </span>
+                                )}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleDeletePreset(preset.id, preset.name)}
+                                className="p-1 rounded-md text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                                title="Xóa hồ sơ này"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+
+                            <div className="text-[11px] font-mono text-zinc-400 space-y-0.5">
+                              <div className="flex items-center justify-between">
+                                <span>Pixel ID:</span>
+                                <span className="text-white font-bold">{preset.pixelId}</span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span>Token:</span>
+                                <span className="text-zinc-500 truncate max-w-[150px]">
+                                  {preset.capiToken ? `${preset.capiToken.slice(0, 10)}...${preset.capiToken.slice(-6)}` : 'Chưa có token'}
+                                </span>
+                              </div>
+                              {preset.testEventCode && (
+                                <div className="flex items-center justify-between">
+                                  <span>Mã test:</span>
+                                  <span className="text-amber-400">{preset.testEventCode}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="mt-3 pt-2.5 border-t border-white/5 flex items-center justify-between">
+                              <span className="text-[10px] text-zinc-500">
+                                {new Date(preset.createdAt).toLocaleDateString('vi-VN')}
+                              </span>
+
+                              {isActive ? (
+                                <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1">
+                                  <Check className="w-3.5 h-3.5" />
+                                  Đang phát sóng
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleApplyPreset(preset)}
+                                  disabled={isSavingTracking}
+                                  className="px-3 py-1 rounded-xl bg-gradient-to-r from-[#FF6320] to-[#FFA153] hover:brightness-105 active:scale-95 text-white text-xs font-bold shadow-md shadow-orange-500/20 transition-all cursor-pointer flex items-center gap-1 disabled:opacity-50"
+                                >
+                                  <Radio className="w-3 h-3" />
+                                  <span>Áp Dụng Ngay</span>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                {/* Bottom link: View doc */}
+                <div className="pt-2 border-t border-white/5 text-[11px] text-zinc-500 flex items-center justify-between">
+                  <span>Hồ sơ lưu trữ: {trackingPresets.length} Pixel</span>
+                  <span className="text-zinc-400 font-mono text-[10px]">CAPI Deduplication: event_id</span>
+                </div>
+              </div>
+            </div>
+
+            {/* ============================================================ */}
+            {/* REAL-TIME CAPI AUDIT STREAM (EVENT LOGS) */}
+            {/* ============================================================ */}
+            <div className="bg-[#141A29] border border-white/10 rounded-3xl p-5 sm:p-6 shadow-xl space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+                    <Activity className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                      <span>Nhật Ký Sự Kiện Chuyển Đổi Thời Gian Thực (CAPI Audit Stream)</span>
+                    </h3>
+                    <p className="text-xs text-zinc-400 mt-0.5">
+                      Giám sát các sự kiện được máy chủ gửi lên Meta Conversions API kèm mã deduplication event_id
+                    </p>
+                  </div>
+                </div>
+
+                {/* Filter Pills */}
+                <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none self-start sm:self-auto py-1">
+                  <button
+                    type="button"
+                    onClick={() => setLogFilter('all')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${logFilter === 'all'
+                      ? 'bg-white/20 text-white'
+                      : 'bg-white/5 text-zinc-400 hover:text-white'
+                      }`}
+                  >
+                    Tất Cả ({trackingStats.totalEvents})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLogFilter('Lead')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${logFilter === 'Lead'
+                      ? 'bg-amber-500/30 text-amber-300 border border-amber-500/40'
+                      : 'bg-white/5 text-zinc-400 hover:text-white'
+                      }`}
+                  >
+                    Lead ({trackingStats.leadEvents})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLogFilter('Contact')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${logFilter === 'Contact'
+                      ? 'bg-cyan-500/30 text-cyan-300 border border-cyan-500/40'
+                      : 'bg-white/5 text-zinc-400 hover:text-white'
+                      }`}
+                  >
+                    Contact ({trackingStats.contactEvents})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLogFilter('CompleteRegistration')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${logFilter === 'CompleteRegistration'
+                      ? 'bg-emerald-500/30 text-emerald-300 border border-emerald-500/40'
+                      : 'bg-white/5 text-zinc-400 hover:text-white'
+                      }`}
+                  >
+                    Hoàn Tất ({trackingStats.completedEvents})
+                  </button>
+                  {trackingStats.failedEvents > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setLogFilter('failed')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${logFilter === 'failed'
+                        ? 'bg-red-500/30 text-red-300 border border-red-500/40'
+                        : 'bg-red-500/10 text-red-400'
+                        }`}
+                    >
+                      Lỗi ({trackingStats.failedEvents})
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Search Log Bar */}
+              <div className="relative">
+                <Search className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={logSearch}
+                  onChange={(e) => setLogSearch(e.target.value)}
+                  placeholder="Tìm kiếm nhật ký theo tên khách, số điện thoại, mã event_id..."
+                  className="w-full h-10 pl-10 pr-4 rounded-xl bg-black/40 border border-white/10 text-white text-xs sm:text-sm focus:outline-none focus:border-blue-500"
+                />
+                {logSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setLogSearch('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Log Table / List */}
+              <div className="rounded-2xl border border-white/10 overflow-hidden bg-black/20">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-white/5 text-[11px] font-bold text-zinc-400 uppercase tracking-wider border-b border-white/10">
+                        <th className="py-3 px-4">Thời Gian</th>
+                        <th className="py-3 px-4">Khách Hàng</th>
+                        <th className="py-3 px-4">Sự Kiện CAPI</th>
+                        <th className="py-3 px-4">Mã Deduplication (Event ID)</th>
+                        <th className="py-3 px-4">Trạng Thái</th>
+                        <th className="py-3 px-4 text-right">Chi Tiết</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5 text-xs">
+                      {isLogsLoading ? (
+                        <tr>
+                          <td colSpan={6} className="py-8 text-center text-zinc-400">
+                            <RefreshCw className="w-6 h-6 animate-spin mx-auto text-blue-400 mb-2" />
+                            <span>Đang đồng bộ dữ liệu nhật ký sự kiện CAPI...</span>
+                          </td>
+                        </tr>
+                      ) : filteredTrackingLogs.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="py-10 text-center text-zinc-500">
+                            <Zap className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
+                            <div className="text-xs font-semibold text-zinc-400">
+                              Chưa có sự kiện CAPI nào phù hợp bộ lọc
+                            </div>
+                            <p className="text-[11px] text-zinc-500 mt-1">
+                              Sự kiện sẽ tự động xuất hiện khi khách hàng gửi đơn đăng ký hoặc Admin cập nhật trạng thái xử lý.
+                            </p>
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredTrackingLogs.map((log) => (
+                          <tr key={log.id} className="hover:bg-white/[0.02] transition-colors">
+                            <td className="py-3 px-4 whitespace-nowrap text-zinc-400 font-mono text-[11px]">
+                              {new Date(log.sentAt).toLocaleString('vi-VN', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit',
+                                day: '2-digit',
+                                month: '2-digit',
+                              })}
+                            </td>
+
+                            <td className="py-3 px-4">
+                              <div className="font-bold text-white">{log.leadName}</div>
+                              <div className="text-[11px] text-zinc-400 font-mono flex items-center gap-1.5">
+                                <span>{log.phone}</span>
+                                {log.province && <span>• {log.province}</span>}
+                              </div>
+                            </td>
+
+                            <td className="py-3 px-4 whitespace-nowrap">
+                              {log.eventName === 'Lead' ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[11px] font-bold">
+                                  <Sparkles className="w-2.5 h-2.5" />
+                                  Lead
+                                </span>
+                              ) : log.eventName === 'Contact' ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-[11px] font-bold">
+                                  <PhoneCall className="w-2.5 h-2.5" />
+                                  Contact
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[11px] font-bold">
+                                  <CheckCircle className="w-2.5 h-2.5" />
+                                  {log.eventName}
+                                </span>
+                              )}
+                            </td>
+
+                            <td className="py-3 px-4 font-mono text-[11px] text-zinc-300">
+                              {log.eventId ? (
+                                <div className="flex items-center gap-1">
+                                  <span className="truncate max-w-[140px]" title={log.eventId}>
+                                    {log.eventId}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => navigator.clipboard.writeText(log.eventId!)}
+                                    className="text-zinc-500 hover:text-white p-0.5"
+                                    title="Copy event_id"
+                                  >
+                                    <Copy className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <span className="text-zinc-600 italic">Không có mã</span>
+                              )}
+                            </td>
+
+                            <td className="py-3 px-4 whitespace-nowrap">
+                              {log.success ? (
+                                <span className="inline-flex items-center gap-1 text-emerald-400 font-semibold text-[11px]">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                  Thành công (200 OK)
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-red-400 font-semibold text-[11px]">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                                  Thất bại
+                                </span>
+                              )}
+                            </td>
+
+                            <td className="py-3 px-4 text-right whitespace-nowrap">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedLog(log)}
+                                className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white text-[11px] font-semibold transition-colors cursor-pointer"
+                              >
+                                Xem Payload
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="px-4 py-3 bg-white/[0.02] border-t border-white/5 flex items-center justify-between text-[11px] text-zinc-500">
+                  <span>Hiển thị {filteredTrackingLogs.length} sự kiện CAPI gần nhất</span>
+                  <span>Dữ liệu lưu trữ trực tiếp trong tài liệu Khách hàng</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* ============================================================ */}
@@ -2359,33 +3099,30 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
                 <button
                   type="button"
                   onClick={() => setEditStatus('pending')}
-                  className={`p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                    editStatus === 'pending'
-                      ? 'bg-amber-500/25 border-amber-500 text-amber-300 shadow-md'
-                      : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white'
-                  }`}
+                  className={`p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${editStatus === 'pending'
+                    ? 'bg-amber-500/25 border-amber-500 text-amber-300 shadow-md'
+                    : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white'
+                    }`}
                 >
                   Chờ gọi
                 </button>
                 <button
                   type="button"
                   onClick={() => setEditStatus('contacted')}
-                  className={`p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                    editStatus === 'contacted'
-                      ? 'bg-blue-500/25 border-blue-500 text-blue-300 shadow-md'
-                      : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white'
-                  }`}
+                  className={`p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${editStatus === 'contacted'
+                    ? 'bg-blue-500/25 border-blue-500 text-blue-300 shadow-md'
+                    : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white'
+                    }`}
                 >
                   Đã gọi tư vấn
                 </button>
                 <button
                   type="button"
                   onClick={() => setEditStatus('completed')}
-                  className={`p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                    editStatus === 'completed'
-                      ? 'bg-emerald-500/25 border-emerald-500 text-emerald-300 shadow-md'
-                      : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white'
-                  }`}
+                  className={`p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${editStatus === 'completed'
+                    ? 'bg-emerald-500/25 border-emerald-500 text-emerald-300 shadow-md'
+                    : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white'
+                    }`}
                 >
                   Đã lắp đặt
                 </button>
@@ -2848,6 +3585,192 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* MODAL 4: LƯU HỒ SƠ PIXEL DỰ PHÒNG MỚI */}
+      {/* ============================================================ */}
+      {isAddingPresetModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="relative w-full max-w-md bg-[#182030] border border-white/15 rounded-3xl p-6 shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-purple-600/20 text-purple-400 flex items-center justify-center">
+                  <Bookmark className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white text-base">Lưu Hồ Sơ Pixel Dự Phòng</h3>
+                  <p className="text-[11px] text-zinc-400">Tạo tên nhận diện để chuyển đổi 1-click sau này</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddingPresetModal(false)}
+                className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveCurrentAsPreset} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-zinc-300 mb-1">
+                  Tên hồ sơ Pixel <span className="text-purple-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newPresetName}
+                  onChange={(e) => setNewPresetName(e.target.value)}
+                  placeholder="Ví dụ: Pixel Chính BM FPT, Pixel Dự Phòng BM2..."
+                  className="w-full h-11 px-3.5 rounded-xl bg-black/40 border border-white/15 text-white text-xs sm:text-sm focus:outline-none focus:border-purple-500"
+                />
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-black/30 border border-white/5 space-y-2 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-zinc-400">Pixel ID sẽ lưu:</span>
+                  <span className="font-mono text-white font-bold">{trackingPixelId || 'Chưa nhập'}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-zinc-400">CAPI Token:</span>
+                  <span className="font-mono text-zinc-400 truncate max-w-[160px]">
+                    {trackingCapiToken ? `${trackingCapiToken.slice(0, 8)}...${trackingCapiToken.slice(-6)}` : 'Chưa có'}
+                  </span>
+                </div>
+                {trackingTestEventCode && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400">Mã thử nghiệm:</span>
+                    <span className="font-mono text-amber-400">{trackingTestEventCode}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setIsAddingPresetModal(false)}
+                  className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 text-xs font-semibold cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingTracking}
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs sm:text-sm font-bold shadow-lg shadow-purple-500/25 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {isSavingTracking ? 'Đang lưu...' : 'Lưu Vào Kho Dự Phòng'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* MODAL 5: CHI TIẾT SỰ KIỆN CAPI (INSPECTOR) */}
+      {/* ============================================================ */}
+      {selectedLog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="relative w-full max-w-lg bg-[#182030] border border-white/15 rounded-3xl p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center">
+                  <Activity className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white text-base">Chi Tiết Sự Kiện CAPI</h3>
+                  <p className="text-[11px] text-zinc-400">
+                    Sự kiện: <span className="text-white font-bold">{selectedLog.eventName}</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedLog(null)}
+                className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Event Summary Grid */}
+            <div className="grid grid-cols-2 gap-3 text-xs bg-black/40 p-4 rounded-2xl border border-white/10">
+              <div>
+                <span className="text-zinc-400">Khách hàng:</span>
+                <p className="font-bold text-white text-sm mt-0.5">{selectedLog.leadName}</p>
+              </div>
+              <div>
+                <span className="text-zinc-400">Số điện thoại:</span>
+                <p className="font-bold text-[#FFA153] font-mono text-sm mt-0.5">{selectedLog.phone}</p>
+              </div>
+              <div>
+                <span className="text-zinc-400">Khu vực:</span>
+                <p className="font-semibold text-zinc-200 mt-0.5">{selectedLog.province || 'Chưa rõ'}</p>
+              </div>
+              <div>
+                <span className="text-zinc-400">Gói quan tâm:</span>
+                <p className="font-semibold text-zinc-200 mt-0.5">{selectedLog.packageName || 'Chưa rõ'}</p>
+              </div>
+              <div>
+                <span className="text-zinc-400">Thời gian bắn:</span>
+                <p className="font-semibold text-zinc-300 mt-0.5">
+                  {new Date(selectedLog.sentAt).toLocaleString('vi-VN')}
+                </p>
+              </div>
+              <div>
+                <span className="text-zinc-400">Kết quả:</span>
+                <p className={`font-bold mt-0.5 ${selectedLog.success ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {selectedLog.success ? 'Thành công (200 OK)' : 'Thất bại'}
+                </p>
+              </div>
+            </div>
+
+            {/* Deduplication & Meta Keys */}
+            <div className="space-y-2">
+              <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
+                <span>Khóa Chống Trùng Lặp (Deduplication Keys):</span>
+              </span>
+              <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 space-y-1.5 text-xs font-mono">
+                <div className="flex items-center justify-between">
+                  <span className="text-zinc-400">event_id:</span>
+                  <span className="text-emerald-400 select-all">{selectedLog.eventId || 'None'}</span>
+                </div>
+                {selectedLog.clientIp && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400">client_ip:</span>
+                    <span className="text-zinc-300">{selectedLog.clientIp}</span>
+                  </div>
+                )}
+                {selectedLog.userAgent && (
+                  <div>
+                    <span className="text-zinc-400 block text-[10px]">User-Agent:</span>
+                    <span className="text-zinc-500 text-[10px] break-all block">{selectedLog.userAgent}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Meta Response */}
+            <div className="space-y-1.5">
+              <span className="text-xs font-bold text-white">Phản hồi từ Meta Graph API:</span>
+              <pre className="p-3 rounded-xl bg-black/60 border border-white/10 text-[11px] font-mono text-zinc-300 overflow-x-auto max-h-32">
+                {selectedLog.response || (selectedLog.success ? '{"events_received": 1, "messages": []}' : 'Không có chi tiết lỗi')}
+              </pre>
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => setSelectedLog(null)}
+                className="px-5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-semibold cursor-pointer"
+              >
+                Đóng
+              </button>
+            </div>
           </div>
         </div>
       )}

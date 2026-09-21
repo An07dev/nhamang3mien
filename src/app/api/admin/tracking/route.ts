@@ -49,14 +49,20 @@ export async function POST(req: NextRequest) {
     const testEventCode = (body.testEventCode || '').trim();
     const isEnabled = Boolean(body.isEnabled);
 
+    await connectDB();
+    const existingDoc = await Setting.findOne({ key: 'tracking_config' }).lean();
+    const existingPresets = (existingDoc?.value as any)?.presets || [];
+
+    const presets = Array.isArray(body.presets) ? body.presets : existingPresets;
+
     const newConfig: TrackingConfig = {
       pixelId,
       capiToken,
       testEventCode,
       isEnabled,
+      presets,
     };
 
-    await connectDB();
     const updated = await Setting.findOneAndUpdate(
       { key: 'tracking_config' },
       { $set: { value: newConfig } },
