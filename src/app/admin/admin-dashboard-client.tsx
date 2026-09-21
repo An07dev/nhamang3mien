@@ -46,13 +46,11 @@ import {
   KeyRound,
   Activity,
   Radio,
-  Bookmark,
   ArrowRight,
   ShieldCheck,
   CheckCircle,
 } from 'lucide-react';
 import Link from 'next/link';
-import { PixelPreset } from '@/lib/tracking-config';
 import { CapiLogItem, CapiStats } from '@/app/api/admin/tracking/logs/route';
 
 export interface LeadItem {
@@ -334,8 +332,7 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
     details?: any;
   } | null>(null);
 
-  // Meta Pixel & CAPI Extended State (Monitoring & Presets)
-  const [trackingPresets, setTrackingPresets] = useState<PixelPreset[]>([]);
+  // Meta Pixel & CAPI Extended State (Monitoring & Logs)
   const [trackingLogs, setTrackingLogs] = useState<CapiLogItem[]>([]);
   const [trackingStats, setTrackingStats] = useState<CapiStats>({
     totalEvents: 0,
@@ -350,9 +347,6 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
   const [logFilter, setLogFilter] = useState<'all' | 'Lead' | 'Contact' | 'CompleteRegistration' | 'failed'>('all');
   const [logSearch, setLogSearch] = useState('');
   const [selectedLog, setSelectedLog] = useState<CapiLogItem | null>(null);
-  const [newPresetName, setNewPresetName] = useState('');
-  const [isAddingPresetModal, setIsAddingPresetModal] = useState(false);
-  const [presetSuccessMsg, setPresetSuccessMsg] = useState<string | null>(null);
   const [copiedPixelId, setCopiedPixelId] = useState(false);
 
   const fetchTrackingSettings = useCallback(async () => {
@@ -369,7 +363,6 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
         setTrackingCapiToken(data.data.capiToken || '');
         setTrackingTestEventCode(data.data.testEventCode || '');
         setTrackingIsEnabled(Boolean(data.data.isEnabled));
-        setTrackingPresets(data.data.presets || []);
       }
     } catch (err) {
       console.error('Lỗi tải cấu hình tracking:', err);
@@ -511,7 +504,6 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
           capiToken: trackingCapiToken,
           testEventCode: trackingTestEventCode,
           isEnabled: trackingIsEnabled,
-          presets: trackingPresets,
         }),
       });
       const data = await res.json();
@@ -524,140 +516,6 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
     } catch (err) {
       console.error('Lỗi khi lưu cấu hình tracking:', err);
       alert('Đã xảy ra lỗi kết nối');
-    } finally {
-      setIsSavingTracking(false);
-    }
-  };
-
-  // Áp dụng Preset (1-Click Switch Pixel)
-  const handleApplyPreset = async (preset: PixelPreset) => {
-    if (
-      !window.confirm(
-        `Bạn có chắc chắn muốn chuyển ngay sang hồ sơ "${preset.name}" (Pixel ID: ${preset.pixelId})?\nToàn bộ lượt truy cập website và sự kiện CAPI sẽ lập tức chuyển sang Pixel này.`
-      )
-    ) {
-      return;
-    }
-
-    setTrackingPixelId(preset.pixelId);
-    setTrackingCapiToken(preset.capiToken);
-    setTrackingTestEventCode(preset.testEventCode || '');
-    setTrackingIsEnabled(true);
-    setIsSavingTracking(true);
-
-    try {
-      const res = await fetch('/api/admin/tracking', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          pixelId: preset.pixelId,
-          capiToken: preset.capiToken,
-          testEventCode: preset.testEventCode || '',
-          isEnabled: true,
-          presets: trackingPresets,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setPresetSuccessMsg(`Đã kích hoạt hồ sơ: "${preset.name}"! Website hiện chạy trên Pixel ID: ${preset.pixelId}`);
-        setTimeout(() => setPresetSuccessMsg(null), 6000);
-      } else {
-        alert(data.error || 'Lỗi khi chuyển đổi Pixel');
-      }
-    } catch (err) {
-      console.error('Lỗi khi chuyển đổi Pixel:', err);
-      alert('Đã xảy ra lỗi kết nối');
-    } finally {
-      setIsSavingTracking(false);
-    }
-  };
-
-  // Lưu cấu hình hiện tại thành Preset mới
-  const handleSaveCurrentAsPreset = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newPresetName.trim()) {
-      alert('Vui lòng nhập tên nhận diện cho hồ sơ Pixel (VD: Pixel Dự Phòng BM2...)');
-      return;
-    }
-    if (!trackingPixelId.trim()) {
-      alert('Vui lòng nhập Pixel ID trước khi lưu thành hồ sơ');
-      return;
-    }
-
-    const newPreset: PixelPreset = {
-      id: 'preset_' + Date.now(),
-      name: newPresetName.trim(),
-      pixelId: trackingPixelId.trim(),
-      capiToken: trackingCapiToken.trim(),
-      testEventCode: trackingTestEventCode.trim() || undefined,
-      createdAt: new Date().toISOString(),
-    };
-
-    const updatedPresets = [...trackingPresets, newPreset];
-    setIsSavingTracking(true);
-
-    try {
-      const res = await fetch('/api/admin/tracking', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          pixelId: trackingPixelId,
-          capiToken: trackingCapiToken,
-          testEventCode: trackingTestEventCode,
-          isEnabled: trackingIsEnabled,
-          presets: updatedPresets,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setTrackingPresets(updatedPresets);
-        setIsAddingPresetModal(false);
-        setNewPresetName('');
-        setPresetSuccessMsg(`Đã thêm hồ sơ "${newPreset.name}" vào kho Pixel dự phòng thành công!`);
-        setTimeout(() => setPresetSuccessMsg(null), 6000);
-      } else {
-        alert(data.error || 'Lỗi khi lưu hồ sơ Pixel');
-      }
-    } catch (err) {
-      console.error('Lỗi khi lưu hồ sơ Pixel:', err);
-      alert('Lỗi kết nối khi lưu hồ sơ Pixel');
-    } finally {
-      setIsSavingTracking(false);
-    }
-  };
-
-  // Xóa Preset
-  const handleDeletePreset = async (presetId: string, presetName: string) => {
-    if (!window.confirm(`Bạn có chắc muốn xóa hồ sơ Pixel "${presetName}" khỏi kho dự phòng?`)) {
-      return;
-    }
-
-    const updatedPresets = trackingPresets.filter((p) => p.id !== presetId);
-    setIsSavingTracking(true);
-
-    try {
-      const res = await fetch('/api/admin/tracking', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          pixelId: trackingPixelId,
-          capiToken: trackingCapiToken,
-          testEventCode: trackingTestEventCode,
-          isEnabled: trackingIsEnabled,
-          presets: updatedPresets,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setTrackingPresets(updatedPresets);
-        setPresetSuccessMsg(`Đã xóa hồ sơ "${presetName}" khỏi danh sách dự phòng.`);
-        setTimeout(() => setPresetSuccessMsg(null), 4000);
-      } else {
-        alert(data.error || 'Lỗi khi xóa hồ sơ');
-      }
-    } catch (err) {
-      console.error('Lỗi khi xóa hồ sơ:', err);
-      alert('Lỗi kết nối khi xóa hồ sơ');
     } finally {
       setIsSavingTracking(false);
     }
@@ -2466,339 +2324,219 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
               </div>
             </div>
 
-            {/* Notification alert banner when a preset or settings is changed */}
-            {presetSuccessMsg && (
-              <div className="p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 flex items-center justify-between gap-3 animate-in fade-in">
-                <div className="flex items-center gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-                  <div className="text-xs sm:text-sm font-semibold">{presetSuccessMsg}</div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setPresetSuccessMsg(null)}
-                  className="text-zinc-400 hover:text-white p-1"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-
-            {/* 2-Column Grid: Config & Presets */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              {/* Left Col (7/12): Active Configuration */}
-              <div className="lg:col-span-7 bg-[#141A29] border border-white/10 rounded-3xl p-5 sm:p-6 shadow-xl space-y-5">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center shrink-0 mt-0.5">
-                      <Zap className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-                        <span>Cấu Hình Pixel &amp; CAPI Đang Hoạt Động</span>
-                      </h3>
-                      <p className="text-xs text-zinc-400 mt-0.5">
-                        Áp dụng trực tiếp vào mã Client Pixel và quy trình bắn Server CAPI
-                      </p>
-                    </div>
+            {/* Cấu Hình Meta Pixel & CAPI */}
+            <div className="bg-[#141A29] border border-white/10 rounded-3xl p-5 sm:p-6 shadow-xl space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center shrink-0 mt-0.5">
+                    <Zap className="w-5 h-5" />
                   </div>
-
-                  {/* Tracking toggle switch */}
-                  <label className="flex items-center gap-2.5 p-2 rounded-xl bg-black/40 border border-white/10 cursor-pointer self-start sm:self-auto hover:bg-black/60 transition-colors">
-                    <input
-                      type="checkbox"
-                      checked={trackingIsEnabled}
-                      onChange={(e) => setTrackingIsEnabled(e.target.checked)}
-                      className="w-4 h-4 rounded accent-blue-500 cursor-pointer"
-                    />
-                    <div className="text-xs font-bold text-zinc-200">
-                      {trackingIsEnabled ? (
-                        <span className="text-emerald-400">Đang Bật</span>
-                      ) : (
-                        <span className="text-zinc-400">Đang Tắt</span>
-                      )}
-                    </div>
-                  </label>
-                </div>
-
-                <form onSubmit={handleSaveTrackingSettings} className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Pixel ID */}
-                    <div>
-                      <label className="block text-xs font-bold text-white mb-1.5 flex items-center justify-between">
-                        <span>Meta Pixel ID (Dataset ID)</span>
-                        <span className="text-red-400 font-semibold">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={trackingPixelId}
-                        onChange={(e) => setTrackingPixelId(e.target.value)}
-                        placeholder="Ví dụ: 1234567890123456"
-                        className="w-full h-11 px-3.5 rounded-xl bg-black/40 border border-white/15 text-white font-mono text-xs sm:text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                      />
-                      <span className="text-[10px] text-zinc-400 mt-1 block">
-                        Lấy từ Trình quản lý sự kiện &gt; Cài đặt &gt; ID Tập dữ liệu
-                      </span>
-                    </div>
-
-                    {/* Test Event Code */}
-                    <div>
-                      <label className="block text-xs font-bold text-white mb-1.5 flex items-center justify-between">
-                        <span>Mã Thử Nghiệm (Test Code)</span>
-                        <span className="text-amber-400 text-[10px] font-normal">Tùy chọn test</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={trackingTestEventCode}
-                        onChange={(e) => setTrackingTestEventCode(e.target.value)}
-                        placeholder="Ví dụ: TEST12345"
-                        className="w-full h-11 px-3.5 rounded-xl bg-black/40 border border-white/15 text-white font-mono text-xs sm:text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-                      />
-                      <span className="text-[10px] text-zinc-400 mt-1 block">
-                        Xóa mã này khi chạy chiến dịch quảng cáo thực tế
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* CAPI Token */}
                   <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-xs font-bold text-white flex items-center gap-1.5">
-                        <Lock className="w-3.5 h-3.5 text-blue-400" />
-                        <span>CAPI Access Token (Server Token)</span>
-                        <span className="text-red-400 font-semibold">*</span>
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => setShowCapiToken(!showCapiToken)}
-                        className="text-[11px] text-blue-400 hover:text-blue-300 flex items-center gap-1 cursor-pointer"
-                      >
-                        {showCapiToken ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                        <span>{showCapiToken ? 'Ẩn' : 'Hiện token'}</span>
-                      </button>
-                    </div>
-                    <div className="relative">
-                      <textarea
-                        rows={2}
-                        value={trackingCapiToken}
-                        onChange={(e) => setTrackingCapiToken(e.target.value)}
-                        placeholder="Dán token bắt đầu bằng EAAG... (Tạo tại Trình quản lý sự kiện > Cài đặt > API chuyển đổi > Tạo mã truy cập)"
-                        className={`w-full p-3 rounded-xl bg-black/40 border border-white/15 text-white font-mono text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 ${!showCapiToken ? 'select-none filter blur-[2.5px] hover:blur-none transition-all' : ''}`}
-                      />
-                    </div>
+                    <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                      <span>Cấu Hình Meta Pixel &amp; CAPI</span>
+                      <span className="text-[10px] uppercase px-2 py-0.5 rounded-full font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                        Facebook Ads 2026
+                      </span>
+                    </h3>
+                    <p className="text-xs text-zinc-400 mt-0.5">
+                      Dễ dàng thay đổi hoặc đổi mới Pixel ID &amp; Token bất cứ lúc nào, tự động cập nhật cho toàn bộ website và hệ thống CAPI máy chủ.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Tracking toggle switch */}
+                <label className="flex items-center gap-2.5 p-2 rounded-xl bg-black/40 border border-white/10 cursor-pointer self-start sm:self-auto hover:bg-black/60 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={trackingIsEnabled}
+                    onChange={(e) => setTrackingIsEnabled(e.target.checked)}
+                    className="w-4 h-4 rounded accent-blue-500 cursor-pointer"
+                  />
+                  <div className="text-xs font-bold text-zinc-200">
+                    {trackingIsEnabled ? (
+                      <span className="text-emerald-400">Đang Bật Tracking</span>
+                    ) : (
+                      <span className="text-zinc-400">Đang Tắt Tracking</span>
+                    )}
+                  </div>
+                </label>
+              </div>
+
+              {trackingSavedSuccess && (
+                <div className="p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 flex items-center gap-3 animate-in fade-in">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                  <div className="text-xs sm:text-sm font-semibold">
+                    Đã lưu cấu hình Meta Pixel &amp; CAPI thành công! Hệ thống sẵn sàng ghi nhận chuyển đổi.
+                  </div>
+                </div>
+              )}
+
+              <form onSubmit={handleSaveTrackingSettings} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Pixel ID */}
+                  <div>
+                    <label className="block text-xs font-bold text-white mb-1.5 flex items-center justify-between">
+                      <span>Meta Pixel ID (Dataset ID)</span>
+                      <span className="text-red-400 font-semibold">* Bắt buộc</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={trackingPixelId}
+                      onChange={(e) => setTrackingPixelId(e.target.value)}
+                      placeholder="Ví dụ: 1234567890123456"
+                      className="w-full h-11 px-3.5 rounded-xl bg-black/40 border border-white/15 text-white font-mono text-xs sm:text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    />
                     <span className="text-[10px] text-zinc-400 mt-1 block">
-                      Token bảo mật nghiêm ngặt trên Cloud MongoDB, không lộ ra mã nguồn trình duyệt khách hàng.
+                      Lấy tại: Meta Events Manager (Trình quản lý sự kiện) &gt; Cài đặt &gt; ID Tập dữ liệu.
                     </span>
                   </div>
 
-                  {/* Live CAPI Test Tool Button & Result */}
-                  {testCapiResult && (
-                    <div
-                      className={`p-3.5 rounded-2xl border flex items-start gap-3 animate-in fade-in ${testCapiResult.success
-                        ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
-                        : 'bg-red-500/15 border-red-500/40 text-red-300'
-                        }`}
-                    >
-                      {testCapiResult.success ? (
-                        <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-                      ) : (
-                        <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
-                      )}
-                      <div className="text-xs space-y-1 overflow-hidden w-full">
-                        <div className="font-bold flex items-center justify-between">
-                          <span>{testCapiResult.message}</span>
-                          <button
-                            type="button"
-                            onClick={() => setTestCapiResult(null)}
-                            className="text-zinc-400 hover:text-white"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                        {testCapiResult.details && (
-                          <pre className="text-[10px] font-mono bg-black/50 p-2 rounded-lg mt-1 overflow-x-auto max-h-28 scrollbar-none">
-                            {JSON.stringify(testCapiResult.details, null, 2)}
-                          </pre>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Action row */}
-                  <div className="pt-2 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={handleTestCapi}
-                        disabled={isTestingCapi || isSavingTracking}
-                        className="px-3.5 py-2.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
-                        title="Bắn một sự kiện Lead mẫu lên Meta Graph API để kiểm tra kết nối"
-                      >
-                        <RefreshCw className={`w-3.5 h-3.5 ${isTestingCapi ? 'animate-spin' : ''}`} />
-                        <span>{isTestingCapi ? 'Đang gửi...' : 'Bắn Test CAPI'}</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setIsAddingPresetModal(true)}
-                        disabled={!trackingPixelId.trim()}
-                        className="px-3.5 py-2.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-40"
-                        title="Lưu cấu hình Pixel & Token hiện tại thành một hồ sơ dự phòng"
-                      >
-                        <Bookmark className="w-3.5 h-3.5" />
-                        <span>+ Lưu Thành Hồ Sơ</span>
-                      </button>
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={isSavingTracking || isTestingCapi}
-                      className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs sm:text-sm font-bold shadow-lg shadow-blue-500/25 transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50"
-                    >
-                      <Save className="w-4 h-4" />
-                      <span>{isSavingTracking ? 'Đang lưu...' : 'Lưu Thay Đổi Đang Chạy'}</span>
-                    </button>
+                  {/* Test Event Code */}
+                  <div>
+                    <label className="block text-xs font-bold text-white mb-1.5 flex items-center justify-between">
+                      <span>Mã Thử Nghiệm Sự Kiện (Test Event Code)</span>
+                      <span className="text-amber-400 text-[10px] font-normal">Tùy chọn để test live</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={trackingTestEventCode}
+                      onChange={(e) => setTrackingTestEventCode(e.target.value)}
+                      placeholder="Ví dụ: TEST12345"
+                      className="w-full h-11 px-3.5 rounded-xl bg-black/40 border border-white/15 text-white font-mono text-xs sm:text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                    />
+                    <span className="text-[10px] text-zinc-400 mt-1 block">
+                      Lấy tại tab <strong>Thử nghiệm sự kiện</strong> trên Facebook. Xóa khi chạy chiến dịch thực tế.
+                    </span>
                   </div>
-                </form>
-              </div>
+                </div>
 
-              {/* Right Col (5/12): Pixel Presets & Fast Swapper */}
-              <div className="lg:col-span-5 bg-[#141A29] border border-white/10 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4 flex flex-col justify-between">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-purple-600/20 text-purple-400 flex items-center justify-center shrink-0">
-                        <Bookmark className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-white text-sm sm:text-base">
-                          Kho Hồ Sơ Pixel Dự Phòng
-                        </h3>
-                        <p className="text-[11px] text-zinc-400">
-                          Chuyển đổi Pixel tức thì khi cần đổi tài khoản
-                        </p>
-                      </div>
-                    </div>
-
+                {/* CAPI Token */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <Lock className="w-3.5 h-3.5 text-blue-400" />
+                      <span>Meta CAPI Access Token (Mã truy cập API chuyển đổi)</span>
+                      <span className="text-red-400 font-semibold">*</span>
+                    </label>
                     <button
                       type="button"
-                      onClick={() => setIsAddingPresetModal(true)}
-                      className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+                      onClick={() => setShowCapiToken(!showCapiToken)}
+                      className="text-[11px] text-blue-400 hover:text-blue-300 flex items-center gap-1 cursor-pointer"
                     >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Thêm</span>
+                      {showCapiToken ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      <span>{showCapiToken ? 'Ẩn token' : 'Hiện token'}</span>
                     </button>
                   </div>
-
-                  {/* Fast swap explanation tip */}
-                  <div className="p-3 rounded-2xl bg-black/40 border border-white/5 text-[11px] text-zinc-400 leading-relaxed">
-                    <strong className="text-zinc-200 block mb-0.5">Chuyển đổi 1-Click:</strong>
-                    Khi tài khoản quảng cáo Facebook bị hạn chế hoặc bạn cần đổi Pixel, chỉ cần ấn nút <strong>&quot;Áp Dụng Ngay&quot;</strong> bên dưới để đổi toàn bộ Pixel &amp; CAPI trên website trong 1 giây mà không cần sửa code.
+                  <div className="relative">
+                    <textarea
+                      rows={2}
+                      value={trackingCapiToken}
+                      onChange={(e) => setTrackingCapiToken(e.target.value)}
+                      placeholder="Dán token bắt đầu bằng EAAG... (Tạo tại Trình quản lý sự kiện > Cài đặt > API chuyển đổi > Tạo mã truy cập)"
+                      className={`w-full p-3 rounded-xl bg-black/40 border border-white/15 text-white font-mono text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 ${!showCapiToken ? 'select-none filter blur-[2.5px] hover:blur-none transition-all' : ''}`}
+                    />
                   </div>
+                  <span className="text-[10px] text-zinc-400 mt-1 block">
+                    Token bảo mật nghiêm ngặt trên Cloud MongoDB, chỉ dùng trên server để bắn CAPI và không lộ ra ngoài client.
+                  </span>
+                </div>
 
-                  {/* Presets List */}
-                  <div className="space-y-2.5 max-h-[360px] overflow-y-auto pr-1">
-                    {trackingPresets.length === 0 ? (
-                      <div className="p-6 text-center rounded-2xl bg-black/20 border border-dashed border-white/10 space-y-2">
-                        <Bookmark className="w-8 h-8 text-zinc-600 mx-auto" />
-                        <div className="text-xs font-bold text-zinc-400">Chưa có hồ sơ Pixel dự phòng nào</div>
-                        <p className="text-[11px] text-zinc-500">
-                          Hãy lưu cấu hình Pixel hiện tại thành hồ sơ để dễ dàng thay đổi khi cần.
-                        </p>
+                {/* Lifecycle Explanation Banner */}
+                <div className="p-4 rounded-2xl bg-black/30 border border-white/5 space-y-2.5">
+                  <div className="text-xs font-bold text-white flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-[#FFA153]" />
+                    <span>Cơ Chế Theo Dõi Trạng Thái Khách Hàng Tự Động (Lifecycle CAPI):</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-[11px]">
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-1">
+                      <div className="font-bold text-amber-400 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-amber-400" />
+                        <span>1. Khách Gửi Đơn</span>
+                      </div>
+                      <p className="text-zinc-300">
+                        Bắn đồng thời Pixel &amp; CAPI sự kiện <strong>Lead</strong> kèm mã <code>event_id</code> chống tính trùng.
+                      </p>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-1">
+                      <div className="font-bold text-cyan-400 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-cyan-400" />
+                        <span>2. Admin Gọi Tư Vấn</span>
+                      </div>
+                      <p className="text-zinc-300">
+                        Đổi trạng thái sang <em>&quot;Đã gọi&quot;</em> -&gt; Server tự động bắn CAPI sự kiện <strong>Contact</strong>.
+                      </p>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-1">
+                      <div className="font-bold text-emerald-400 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                        <span>3. Lắp Đặt Hoàn Tất</span>
+                      </div>
+                      <p className="text-zinc-300">
+                        Đổi sang <em>&quot;Đã hoàn tất&quot;</em> -&gt; Server tự động bắn CAPI sự kiện <strong>CompleteRegistration</strong>.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Live CAPI Test Tool Button & Result */}
+                {testCapiResult && (
+                  <div
+                    className={`p-3.5 rounded-2xl border flex items-start gap-3 animate-in fade-in ${testCapiResult.success
+                      ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                      : 'bg-red-500/15 border-red-500/40 text-red-300'
+                      }`}
+                  >
+                    {testCapiResult.success ? (
+                      <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                    ) : (
+                      <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                    )}
+                    <div className="text-xs space-y-1 overflow-hidden w-full">
+                      <div className="font-bold flex items-center justify-between">
+                        <span>{testCapiResult.message}</span>
                         <button
                           type="button"
-                          onClick={() => setIsAddingPresetModal(true)}
-                          disabled={!trackingPixelId.trim()}
-                          className="px-3.5 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
+                          onClick={() => setTestCapiResult(null)}
+                          className="text-zinc-400 hover:text-white"
                         >
-                          <Plus className="w-3 h-3" />
-                          <span>Lưu Pixel Hiện Tại Thành Hồ Sơ</span>
+                          <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                    ) : (
-                      trackingPresets.map((preset) => {
-                        const isActive = preset.pixelId === trackingPixelId;
-                        return (
-                          <div
-                            key={preset.id}
-                            className={`p-3.5 rounded-2xl border transition-all ${isActive
-                              ? 'bg-blue-500/10 border-blue-500/40 shadow-md shadow-blue-500/10'
-                              : 'bg-black/30 border-white/10 hover:border-white/20'
-                              }`}
-                          >
-                            <div className="flex items-center justify-between gap-2 mb-1.5">
-                              <div className="flex items-center gap-2">
-                                <span className="font-bold text-white text-xs">{preset.name}</span>
-                                {isActive && (
-                                  <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                                    Đang Chạy
-                                  </span>
-                                )}
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => handleDeletePreset(preset.id, preset.name)}
-                                className="p-1 rounded-md text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
-                                title="Xóa hồ sơ này"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-
-                            <div className="text-[11px] font-mono text-zinc-400 space-y-0.5">
-                              <div className="flex items-center justify-between">
-                                <span>Pixel ID:</span>
-                                <span className="text-white font-bold">{preset.pixelId}</span>
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <span>Token:</span>
-                                <span className="text-zinc-500 truncate max-w-[150px]">
-                                  {preset.capiToken ? `${preset.capiToken.slice(0, 10)}...${preset.capiToken.slice(-6)}` : 'Chưa có token'}
-                                </span>
-                              </div>
-                              {preset.testEventCode && (
-                                <div className="flex items-center justify-between">
-                                  <span>Mã test:</span>
-                                  <span className="text-amber-400">{preset.testEventCode}</span>
-                                </div>
-                              )}
-                            </div>
-
-                            <div className="mt-3 pt-2.5 border-t border-white/5 flex items-center justify-between">
-                              <span className="text-[10px] text-zinc-500">
-                                {new Date(preset.createdAt).toLocaleDateString('vi-VN')}
-                              </span>
-
-                              {isActive ? (
-                                <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1">
-                                  <Check className="w-3.5 h-3.5" />
-                                  Đang phát sóng
-                                </span>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => handleApplyPreset(preset)}
-                                  disabled={isSavingTracking}
-                                  className="px-3 py-1 rounded-xl bg-gradient-to-r from-[#FF6320] to-[#FFA153] hover:brightness-105 active:scale-95 text-white text-xs font-bold shadow-md shadow-orange-500/20 transition-all cursor-pointer flex items-center gap-1 disabled:opacity-50"
-                                >
-                                  <Radio className="w-3 h-3" />
-                                  <span>Áp Dụng Ngay</span>
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
+                      {testCapiResult.details && (
+                        <pre className="text-[10px] font-mono bg-black/50 p-2 rounded-lg mt-1 overflow-x-auto max-h-28 scrollbar-none">
+                          {JSON.stringify(testCapiResult.details, null, 2)}
+                        </pre>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* Bottom link: View doc */}
-                <div className="pt-2 border-t border-white/5 text-[11px] text-zinc-500 flex items-center justify-between">
-                  <span>Hồ sơ lưu trữ: {trackingPresets.length} Pixel</span>
-                  <span className="text-zinc-400 font-mono text-[10px]">CAPI Deduplication: event_id</span>
+                {/* Action row */}
+                <div className="pt-2 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={handleTestCapi}
+                    disabled={isTestingCapi || isSavingTracking}
+                    className="px-4 py-2.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    title="Bắn một sự kiện Lead mẫu lên Meta Graph API để kiểm tra kết nối"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isTestingCapi ? 'animate-spin' : ''}`} />
+                    <span>{isTestingCapi ? 'Đang gửi test lên Meta...' : 'Bắn Test CAPI Trực Tuyến'}</span>
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={isSavingTracking || isTestingCapi}
+                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs sm:text-sm font-bold shadow-lg shadow-blue-500/25 transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>{isSavingTracking ? 'Đang lưu...' : 'Lưu Cấu Hình Pixel & CAPI'}</span>
+                  </button>
                 </div>
-              </div>
+              </form>
             </div>
 
             {/* ============================================================ */}
@@ -3590,87 +3328,7 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
       )}
 
       {/* ============================================================ */}
-      {/* MODAL 4: LƯU HỒ SƠ PIXEL DỰ PHÒNG MỚI */}
-      {/* ============================================================ */}
-      {isAddingPresetModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-          <div className="relative w-full max-w-md bg-[#182030] border border-white/15 rounded-3xl p-6 shadow-2xl space-y-5">
-            <div className="flex items-center justify-between border-b border-white/10 pb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-xl bg-purple-600/20 text-purple-400 flex items-center justify-center">
-                  <Bookmark className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-white text-base">Lưu Hồ Sơ Pixel Dự Phòng</h3>
-                  <p className="text-[11px] text-zinc-400">Tạo tên nhận diện để chuyển đổi 1-click sau này</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsAddingPresetModal(false)}
-                className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveCurrentAsPreset} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-zinc-300 mb-1">
-                  Tên hồ sơ Pixel <span className="text-purple-400">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={newPresetName}
-                  onChange={(e) => setNewPresetName(e.target.value)}
-                  placeholder="Ví dụ: Pixel Chính BM FPT, Pixel Dự Phòng BM2..."
-                  className="w-full h-11 px-3.5 rounded-xl bg-black/40 border border-white/15 text-white text-xs sm:text-sm focus:outline-none focus:border-purple-500"
-                />
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-black/30 border border-white/5 space-y-2 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="text-zinc-400">Pixel ID sẽ lưu:</span>
-                  <span className="font-mono text-white font-bold">{trackingPixelId || 'Chưa nhập'}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-zinc-400">CAPI Token:</span>
-                  <span className="font-mono text-zinc-400 truncate max-w-[160px]">
-                    {trackingCapiToken ? `${trackingCapiToken.slice(0, 8)}...${trackingCapiToken.slice(-6)}` : 'Chưa có'}
-                  </span>
-                </div>
-                {trackingTestEventCode && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-zinc-400">Mã thử nghiệm:</span>
-                    <span className="font-mono text-amber-400">{trackingTestEventCode}</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
-                <button
-                  type="button"
-                  onClick={() => setIsAddingPresetModal(false)}
-                  className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 text-xs font-semibold cursor-pointer"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSavingTracking}
-                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs sm:text-sm font-bold shadow-lg shadow-purple-500/25 transition-all cursor-pointer disabled:opacity-50"
-                >
-                  {isSavingTracking ? 'Đang lưu...' : 'Lưu Vào Kho Dự Phòng'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ============================================================ */}
-      {/* MODAL 5: CHI TIẾT SỰ KIỆN CAPI (INSPECTOR) */}
+      {/* MODAL 4: CHI TIẾT SỰ KIỆN CAPI (INSPECTOR) */}
       {/* ============================================================ */}
       {selectedLog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
