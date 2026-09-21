@@ -12,7 +12,7 @@ export default function Footer() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
           <div>
             <span className="text-sm font-black text-white block">
-              Tổng Đài Tư Vấn Lắp Đặt Wifi Nhà Mạng 3 Miền (24/7)
+              Tổng Đài Tư Vấn Lắp Đặt Wifi FPT 3 Miền (24/7)
             </span>
             <span className="text-xs text-zinc-400">
               Tiếp nhận đăng ký trực tuyến toàn quốc, phủ sóng Bắc - Trung - Nam, lắp đặt thần tốc
@@ -38,12 +38,12 @@ export default function Footer() {
           <div className="flex items-center gap-3 mb-2">
             <img
               src="/logo.png"
-              alt="Logo Nhà Mạng Ba Miền"
-              className="w-12 h-12 rounded-full object-contain shadow-md border border-red-900/50"
+              alt="Logo FPT 3 Miền"
+              className="w-12 h-12 rounded-full object-contain shadow-md border border-orange-900/50"
             />
             <div>
               <span className="text-lg font-black text-white tracking-tight">
-                NHÀ MẠNG <span className="text-[#FF6320]">BA MIỀN</span>
+                FPT <span className="text-[#FF6320]">3 MIỀN</span>
               </span>
               <span className="block text-[10px] text-zinc-400 font-semibold">
                 Lắp Đặt Toàn Quốc &bull; Uy Tín &bull; Tận Tâm &bull; Nhiệt Tình
@@ -52,7 +52,7 @@ export default function Footer() {
           </div>
 
           <p className="text-zinc-400 leading-relaxed">
-            <strong>Tổng công ty Viễn thông Nhà Mạng 3 Miền</strong>
+            <strong>Tổng công ty Viễn thông FPT 3 Miền</strong>
           </p>
           <p className="text-zinc-400 leading-relaxed">
             Hạ tầng mạng cáp quang băng rộng thế hệ mới phủ sóng toàn diện 3 miền Bắc - Trung - Nam với công nghệ Wi-Fi 6 tiên tiến.
@@ -102,7 +102,7 @@ export default function Footer() {
 
         {/* Col 3 */}
         <div className="space-y-3">
-          <h4 className="font-bold text-white text-sm">Về Nhà Mạng 3 Miền</h4>
+          <h4 className="font-bold text-white text-sm">Về FPT 3 Miền</h4>
           <ul className="space-y-2 text-zinc-400">
             <li><a href="#" className="hover:text-white transition-colors">Giới thiệu chung</a></li>
             <li><a href="#" className="hover:text-white transition-colors">Hệ sinh thái hạ tầng viễn thông</a></li>
@@ -125,7 +125,7 @@ export default function Footer() {
       {/* Copyright Bar */}
       <div className="border-t border-zinc-800 py-4 text-center text-zinc-500 text-[11px]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>&copy; 2026 Bản quyền thuộc về Nhà Mạng 3 Miền. Tất cả quyền được bảo lưu.</span>
+          <span>&copy; 2026 Bản quyền thuộc về FPT 3 Miền. Tất cả quyền được bảo lưu.</span>
           <div className="flex items-center gap-1.5 text-emerald-400">
             <ShieldCheck className="w-3.5 h-3.5" />
             <span>Website đăng ký trực tuyến chính thức có mã hóa SSL bảo mật</span>

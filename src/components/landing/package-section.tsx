@@ -197,7 +197,7 @@ const FALLBACK_PACKAGES: PackageItem[] = [
     suitableFor: 'Hộ gia đình cao cấp, biệt thự, smart home',
     features: [
       'Tốc độ tải lên và tải xuống 1.000 Mbps',
-      'Gói truyền hình V.VIP cao cấp nhất của Nhà Mạng 3 Miền',
+      'Gói truyền hình V.VIP cao cấp nhất của FPT 3 Miền',
       'Xem Ngoại Hạng Anh, phim 4K không độ trễ',
       'Trang bị thiết bị Wi-Fi 6 Mesh mở rộng sóng',
     ],
@@ -413,7 +413,7 @@ export default function PackageSection({ onSelectPackage }: PackageSectionProps)
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto">
           <h2 className="text-2xl sm:text-4xl font-black text-zinc-900 dark:text-white tracking-tight">
-            Chọn Gói Cước Nhà Mạng 3 Miền Phù Hợp Với Bạn
+            Chọn Gói Cước FPT 3 Miền Phù Hợp Với Bạn
           </h2>
         </div>
 
@@ -486,7 +486,7 @@ export default function PackageSection({ onSelectPackage }: PackageSectionProps)
             </div>
             <div>
               <h4 className="font-extrabold text-base text-zinc-900 dark:text-zinc-100">
-                Cam Kết Chất Lượng Dịch Vụ Của Nhà Mạng 3 Miền
+                Cam Kết Chất Lượng Dịch Vụ Của FPT 3 Miền
               </h4>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
                 Ký hợp đồng điện tử tại nhà &bull; Triển khai lắp đặt từ 12h - 36h &bull; Bảo trì trọn

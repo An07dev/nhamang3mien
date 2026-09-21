@@ -3,7 +3,7 @@ import { getAdminSession } from '@/lib/auth';
 import AdminDashboardClient from './admin-dashboard-client';
 
 export const metadata = {
-  title: 'Quản Trị Khách Hàng | Nhà Mạng 3 Miền',
+  title: 'Quản Trị Khách Hàng | FPT 3 Miền',
   description: 'Hệ thống tiếp nhận và quản lý khách hàng đăng ký lắp đặt internet và truyền hình',
 };
 

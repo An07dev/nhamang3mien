@@ -160,7 +160,7 @@ export const INITIAL_PACKAGES = [
     suitableFor: 'Hộ gia đình cao cấp, biệt thự, smart home',
     features: [
       'Tốc độ tải lên và tải xuống 1.000 Mbps',
-      'Gói truyền hình V.VIP cao cấp nhất của Nhà Mạng 3 Miền',
+      'Gói truyền hình V.VIP cao cấp nhất của FPT 3 Miền',
       'Xem Ngoại Hạng Anh, phim 4K không độ trễ',
       'Trang bị thiết bị Wi-Fi 6 Mesh mở rộng sóng',
     ],

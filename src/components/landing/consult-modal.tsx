@@ -68,7 +68,7 @@ export default function ConsultModal({ isOpen, onClose, selectedPackage }: Consu
       if (response.ok && data.success) {
         setResult({
           success: true,
-          message: data.message || 'Đăng ký thành công! Chuyên viên Nhà Mạng 3 Miền sẽ liên hệ hỗ trợ quý khách trong 5 phút.',
+          message: data.message || 'Đăng ký thành công! Chuyên viên FPT 3 Miền sẽ liên hệ hỗ trợ quý khách trong 5 phút.',
         });
         setName('');
         setPhone('');
@@ -107,12 +107,12 @@ export default function ConsultModal({ isOpen, onClose, selectedPackage }: Consu
         <div className="bg-gradient-to-r from-[#FF6320] to-[#FFA153] px-5 py-4 sm:px-6 sm:py-5 text-white flex items-center gap-3 sm:gap-4 shrink-0 pr-12">
           <img
             src="/logo.png"
-            alt="Logo Nhà Mạng Ba Miền"
+            alt="Logo FPT 3 Miền"
             className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-contain shadow-md border-2 border-white/40 shrink-0"
           />
           <div>
             <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/20 text-white text-[9px] sm:text-[10px] font-bold uppercase mb-0.5">
-              <span>Nhà Mạng Ba Miền &bull; Hỗ Trợ 24/7</span>
+              <span>FPT 3 Miền &bull; Hỗ Trợ 24/7</span>
             </div>
             <h3 className="text-base sm:text-xl font-black tracking-tight leading-tight">
               Đăng Ký Tư Vấn Lắp Đặt

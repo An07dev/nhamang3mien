@@ -42,7 +42,7 @@ const REVIEWS: ReviewItem[] = [
     packageName: 'Gói Lux 500 Mesh Wi-Fi 6',
     rating: 5,
     comment:
-      'Quán cafe kết hợp homestay của mình thường xuyên có 50 - 70 khách ngồi làm việc từ xa. Trước đây dùng mạng cũ hay bị nghẽn giờ cao điểm, từ khi chuyển sang gói Lux 500 của Nhà Mạng Ba Miền thì khách khen nức nở. Sóng phủ kín 3 tầng không cần đổi mạng.',
+      'Quán cafe kết hợp homestay của mình thường xuyên có 50 - 70 khách ngồi làm việc từ xa. Trước đây dùng mạng cũ hay bị nghẽn giờ cao điểm, từ khi chuyển sang gói Lux 500 của FPT 3 Miền thì khách khen nức nở. Sóng phủ kín 3 tầng không cần đổi mạng.',
     date: '1 tuần trước',
     avatarColor: 'from-purple-600 to-pink-500',
   },

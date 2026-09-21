@@ -40,7 +40,7 @@ export default function HeroBanner({ onOpenModal }: HeroBannerProps) {
       if (response.ok && data.success) {
         setResult({
           success: true,
-          message: data.message || 'Đăng ký thành công! Chuyên viên Nhà Mạng 3 Miền sẽ liên hệ hỗ trợ trong vòng 5 phút.',
+          message: data.message || 'Đăng ký thành công! Chuyên viên FPT 3 Miền sẽ liên hệ hỗ trợ trong vòng 5 phút.',
         });
         setName('');
         setPhone('');
@@ -74,7 +74,7 @@ export default function HeroBanner({ onOpenModal }: HeroBannerProps) {
           <div className="lg:col-span-7 space-y-6">
 
             <h1 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight sm:leading-none text-white">
-              Lắp Wifi Nhà Mạng 3 Miền <br />
+              Lắp Wifi FPT 3 Miền <br />
               <span className="bg-gradient-to-r from-[#FF6320] via-[#FFA153] to-[#FFCD6C] bg-clip-text text-transparent">
                 Tốc Độ Cực Đỉnh &bull; Quà Khủng
               </span>

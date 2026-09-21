@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: true,
-        message: 'Đăng ký thành công! Chuyên viên Nhà Mạng 3 Miền sẽ liên hệ quý khách trong vòng 5 phút.',
+        message: 'Đăng ký thành công! Chuyên viên FPT 3 Miền sẽ liên hệ quý khách trong vòng 5 phút.',
         data: {
           id: newLead._id.toString(),
           name: newLead.name,

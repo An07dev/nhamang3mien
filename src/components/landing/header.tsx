@@ -27,17 +27,17 @@ export default function Header() {
         {/* Left: Brand Logo */}
         <div className="flex items-center gap-3 sm:gap-6">
           <a href="#" className="flex items-center gap-2 group">
-            {/* Logo: Nhà Mạng Ba Miền */}
+            {/* Logo: FPT 3 Miền */}
             <div className="flex items-center gap-2 sm:gap-3">
               <img
                 src="/logo.png"
-                alt="Logo Nhà Mạng Ba Miền"
-                className="w-10 h-10 sm:w-12 sm:h-12 rounded-full shadow-md object-contain border border-red-100 group-hover:scale-105 transition-transform shrink-0"
+                alt="Logo FPT 3 Miền"
+                className="w-10 h-10 sm:w-12 sm:h-12 rounded-full shadow-md object-contain border border-orange-100 group-hover:scale-105 transition-transform shrink-0"
               />
               <div>
                 <div className="flex items-center gap-1">
                   <span className="text-base sm:text-2xl font-black tracking-tight text-zinc-900 leading-none">
-                    NHÀ MẠNG <span className="text-[#B31010]">BA MIỀN</span>
+                    FPT <span className="text-[#FF6320]">3 MIỀN</span>
                   </span>
                 </div>
                 <span className="hidden sm:flex text-[10px] text-zinc-500 font-bold uppercase tracking-wider leading-none items-center gap-1 mt-1">

@@ -69,7 +69,7 @@ export default function AdminLoginPage() {
           <div className="relative inline-block mb-3">
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#FF6320] to-[#FFA153] p-0.5 shadow-lg shadow-orange-500/30 mx-auto">
               <div className="w-full h-full bg-[#182030] rounded-[14px] flex items-center justify-center overflow-hidden">
-                <img src="/logo.png" alt="Nhà Mạng Ba Miền" className="w-12 h-12 object-contain" />
+                <img src="/logo.png" alt="Logo FPT 3 Miền" className="w-12 h-12 object-contain" />
               </div>
             </div>
             <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-emerald-500 border-2 border-[#182030] flex items-center justify-center text-[10px]">
@@ -78,7 +78,7 @@ export default function AdminLoginPage() {
           </div>
 
           <h1 className="text-2xl font-black tracking-tight text-white">
-            Nhà Mạng 3 Miền
+            FPT 3 Miền
           </h1>
           <p className="text-xs text-zinc-400 mt-1 font-medium">
             Hệ Thống Quản Lý Đơn Đăng Ký Khách Hàng
@@ -174,7 +174,7 @@ export default function AdminLoginPage() {
       </div>
 
       <div className="mt-8 text-center text-xs text-zinc-500 z-10">
-        &copy; {new Date().getFullYear()} Nhà Mạng Ba Miền. Bảo mật dữ liệu nội bộ.
+        &copy; {new Date().getFullYear()} FPT 3 Miền. Bảo mật dữ liệu nội bộ.
       </div>
     </div>
   );

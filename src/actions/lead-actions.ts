@@ -59,7 +59,7 @@ export async function createLeadAction(formData: FormData): Promise<LeadSubmissi
     revalidatePath('/');
     return {
       success: true,
-      message: 'Đăng ký thành công! Chuyên viên Nhà Mạng 3 Miền sẽ liên hệ hỗ trợ trong vòng 5 phút.',
+      message: 'Đăng ký thành công! Chuyên viên FPT 3 Miền sẽ liên hệ hỗ trợ trong vòng 5 phút.',
     };
   } catch (error) {
     console.error('Lỗi khi lưu thông tin khách hàng:', error);

@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Nhà Mạng Ba Miền - Lắp Wifi Tốc Độ Cao Toàn Quốc",
+  title: "FPT 3 Miền - Lắp Wifi Tốc Độ Cao Toàn Quốc",
   description: "Lắp đặt mạng Wifi Internet cáp quang toàn quốc. Uy tín - Tận tâm - Nhiệt tình.",
   icons: {
     icon: "/logo.png",

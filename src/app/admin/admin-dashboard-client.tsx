@@ -699,13 +699,13 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#FF6320] to-[#FFA153] p-0.5 shadow-md shadow-orange-500/30">
             <div className="w-full h-full bg-[#182030] rounded-[10px] flex items-center justify-center overflow-hidden">
-              <img src="/logo.png" alt="Nhà Mạng Ba Miền" className="w-8 h-8 object-contain" />
+              <img src="/logo.png" alt="Logo FPT 3 Miền" className="w-8 h-8 object-contain" />
             </div>
           </div>
           <div>
             <div className="flex items-center gap-2">
               <span className="font-black text-white text-base sm:text-lg tracking-tight">
-                Nhà Mạng 3 Miền
+                FPT 3 Miền
               </span>
               <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold border border-emerald-500/30">
                 <Shield className="w-2.5 h-2.5" />

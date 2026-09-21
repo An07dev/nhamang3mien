@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       {
         success: true,
         data: newLead,
-        message: 'Đăng ký thành công! Chuyên viên Nhà Mạng 3 Miền sẽ liên hệ trong 5 phút.',
+        message: 'Đăng ký thành công! Chuyên viên FPT 3 Miền sẽ liên hệ trong 5 phút.',
       },
       { status: 201 }
     );

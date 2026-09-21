@@ -24,7 +24,7 @@ export default function Wifi6Showcase({ onOpenConsult }: Wifi6ShowcaseProps) {
             </span>
           </h2>
           <p className="mt-4 text-sm sm:text-base text-zinc-300 leading-relaxed">
-            Nhà Mạng Ba Miền tiên phong trang bị hoàn toàn <strong className="text-white">miễn phí Modem Wi-Fi 6 chuẩn AX</strong> cho tất cả khách hàng đăng ký mới. Trải nghiệm kết nối không độ trễ, xuyên tường vượt bậc.
+            FPT 3 Miền tiên phong trang bị hoàn toàn <strong className="text-white">miễn phí Modem Wi-Fi 6 chuẩn AX</strong> cho tất cả khách hàng đăng ký mới. Trải nghiệm kết nối không độ trễ, xuyên tường vượt bậc.
           </p>
         </div>
 
@@ -51,7 +51,7 @@ export default function Wifi6Showcase({ onOpenConsult }: Wifi6ShowcaseProps) {
                   <th className="py-3 px-3 sm:px-4">Tiêu chí so sánh</th>
                   <th className="py-3 px-3 sm:px-4 text-zinc-400 bg-white/5 rounded-t-xl">Wi-Fi 5 Cũ (AC1200)</th>
                   <th className="py-3 px-3 sm:px-4 text-[#FFCD6C] bg-gradient-to-r from-[#FF6320]/25 to-transparent rounded-t-xl font-black">
-                    Wi-Fi 6 Mới Của Nhà Mạng Ba Miền
+                    Wi-Fi 6 Mới Của FPT 3 Miền
                   </th>
                 </tr>
               </thead>
