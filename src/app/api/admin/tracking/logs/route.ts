@@ -119,3 +119,32 @@ export async function GET() {
     );
   }
 }
+
+// DELETE /api/admin/tracking/logs - Xóa toàn bộ nhật ký sự kiện CAPI
+export async function DELETE() {
+  const session = await getAdminSession();
+  if (!session.authenticated) {
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    await connectDB();
+
+    // 1. Xóa toàn bộ mảng capiEvents trên tất cả các Lead
+    await Lead.updateMany({}, { $set: { capiEvents: [] } });
+
+    // 2. Xóa các lead test nếu có
+    await Lead.deleteMany({ source: 'Test CAPI Trực Tuyến' });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Đã xóa toàn bộ nhật ký sự kiện CAPI thành công!',
+    });
+  } catch (error: any) {
+    console.error('Lỗi khi xóa nhật ký CAPI:', error);
+    return NextResponse.json(
+      { success: false, error: error.message || 'Lỗi khi xóa nhật ký CAPI' },
+      { status: 500 }
+    );
+  }
+}

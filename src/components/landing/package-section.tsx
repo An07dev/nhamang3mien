@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Wifi, Tv, Building2, Check, Flame, Shield, ArrowRight, Phone } from 'lucide-react';
+import Link from 'next/link';
+import { Wifi, Tv, Building2, Check, Flame, Shield, ArrowRight, Phone, Eye } from 'lucide-react';
 import { useContact } from '@/context/ContactContext';
 import { usePackages, PackageItem, CategoryItem } from '@/context/PackagesContext';
+import { getPackageSlug } from '@/lib/package-utils';
 
 export type { PackageItem, CategoryItem };
 
@@ -234,38 +236,27 @@ function PackageCard({
   onSelectPackage: (name: string) => void;
 }) {
   const { contact } = useContact();
-  const themeGradients: Record<string, string> = {
-    orange: 'bg-gradient-to-b from-[#8E3900] to-[#5C2300] text-white',
-    red: 'bg-gradient-to-b from-[#9E1414] to-[#610808] text-white',
-    purple: 'bg-gradient-to-b from-[#3A015C] to-[#24003B] text-white',
-    slate: 'bg-gradient-to-b from-[#2A3447] to-[#171D29] text-white',
-    emerald: 'bg-gradient-to-b from-[#1C5E28] to-[#0F3816] text-white',
-    blue: 'bg-gradient-to-b from-[#0B3C8A] to-[#052254] text-white',
-    cyan: 'bg-gradient-to-b from-[#005F73] to-[#003440] text-white',
-    amber: 'bg-gradient-to-b from-[#78350F] to-[#451A03] text-white',
-    rose: 'bg-gradient-to-b from-[#881337] to-[#4C0519] text-white',
-    indigo: 'bg-gradient-to-b from-[#312E81] to-[#1E1B4B] text-white',
-    teal: 'bg-gradient-to-b from-[#134E4A] to-[#042F2E] text-white',
-    dark: 'bg-gradient-to-b from-[#222228] to-[#101014] text-white',
-  };
-
-  const cardBg = themeGradients[pkg.theme || 'orange'] || themeGradients.orange;
+  const slug = getPackageSlug(pkg);
 
   return (
     <div
-      className={`relative rounded-3xl p-6 sm:p-7 flex flex-col justify-between shadow-xl transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl border-2 ${pkg.isPopular ? 'border-[#FFCD6C] ring-4 ring-orange-500/20' : 'border-white/15'
-        } ${cardBg}`}
+      className={`relative rounded-3xl p-6 sm:p-7 flex flex-col justify-between transition-all duration-300 hover:-translate-y-2 ${
+        pkg.isPopular
+          ? 'bg-gradient-to-b from-orange-50/90 via-white to-white border-2 border-[#FF6320] ring-4 ring-orange-500/20 shadow-2xl shadow-orange-500/20'
+          : 'bg-white border-2 border-orange-100/90 hover:border-orange-300 shadow-xl hover:shadow-2xl'
+      }`}
     >
       {/* Popular / Tag Ribbon */}
       {pkg.tag && (
-        <div className="absolute -top-3.5 right-6">
+        <div className="absolute -top-3.5 right-6 z-10">
           <span
-            className={`px-3 py-1 rounded-full text-[11px] font-black tracking-wider uppercase shadow-md flex items-center gap-1 ${pkg.isPopular
-              ? 'bg-[#FF6C28] text-white ring-2 ring-white/40'
-              : 'bg-white/20 backdrop-blur-md text-white border border-white/30'
-              }`}
+            className={`px-3.5 py-1 rounded-full text-[11px] font-black tracking-wider uppercase shadow-md flex items-center gap-1.5 ${
+              pkg.isPopular
+                ? 'bg-gradient-to-r from-[#FF6320] to-[#FF8540] text-white ring-2 ring-white shadow-orange-500/30'
+                : 'bg-orange-100 text-[#FF6320] border border-orange-200'
+            }`}
           >
-            {pkg.isPopular && <Flame className="w-3 h-3 fill-white" />}
+            {pkg.isPopular && <Flame className="w-3.5 h-3.5 fill-white text-white animate-pulse" />}
             {pkg.tag}
           </span>
         </div>
@@ -274,67 +265,88 @@ function PackageCard({
       <div>
         {/* Package Title & Suitable */}
         <div className="mb-4">
-          <h3 className="text-2xl font-black text-white tracking-tight">{pkg.name}</h3>
-          <p className="text-xs text-orange-200/90 mt-1 line-clamp-1">{pkg.suitableFor}</p>
+          <h3 className="text-2xl font-black text-zinc-900 tracking-tight flex items-center gap-2">
+            <span>{pkg.name}</span>
+            {pkg.isPopular && (
+              <span className="w-2 h-2 rounded-full bg-[#FF6320] animate-ping" />
+            )}
+          </h3>
+          <p className="text-xs text-zinc-500 mt-1 line-clamp-1 font-medium">{pkg.suitableFor}</p>
         </div>
 
         {/* Speed Box */}
-        <div className="p-3.5 rounded-2xl bg-black/30 border border-white/10 backdrop-blur-xs mb-5">
-          <span className="block text-[11px] uppercase tracking-wider text-orange-200/80 font-bold">
-            Tốc độ truy cập
-          </span>
-          <span className="text-xl sm:text-2xl font-black text-white tracking-tight">
-            {pkg.speed}
-          </span>
+        <div className="p-3.5 rounded-2xl bg-gradient-to-r from-orange-50/90 via-amber-50/50 to-orange-50/90 border border-orange-200/90 mb-5 flex items-center justify-between shadow-xs">
+          <div>
+            <span className="block text-[10px] uppercase tracking-wider text-orange-600 font-extrabold">
+              Tốc độ truy cập
+            </span>
+            <span className="text-xl sm:text-2xl font-black text-zinc-900 tracking-tight">
+              {pkg.speed}
+            </span>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#FF6320] to-[#FFA153] text-white flex items-center justify-center shrink-0 shadow-md shadow-orange-500/25">
+            <Wifi className="w-5 h-5" />
+          </div>
         </div>
 
         {/* Price Box */}
         <div className="mb-6">
           <div className="flex items-baseline gap-1.5">
-            <span className="text-3xl sm:text-4xl font-black text-white tracking-tight font-mono">
+            <span className="text-3xl sm:text-4xl font-black text-[#FF6320] tracking-tight">
               {pkg.price}
             </span>
-            <span className="text-xs text-orange-200 font-semibold">/ tháng</span>
+            <span className="text-xs text-zinc-500 font-bold">/ tháng</span>
           </div>
           {pkg.originalPrice && (
-            <div className="text-xs text-orange-200/70 mt-1 flex items-center gap-1.5">
+            <div className="text-xs text-zinc-400 mt-1 flex items-center gap-1.5">
               <span>Giá niêm yết:</span>
-              <span className="line-through font-mono font-medium">{pkg.originalPrice}</span>
+              <span className="line-through font-medium">{pkg.originalPrice}</span>
+              <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-600 text-[10px] font-black border border-red-200">
+                Ưu đãi 2026
+              </span>
             </div>
           )}
         </div>
 
         {/* Feature List */}
-        <div className="space-y-3 pt-4 border-t border-white/15 mb-6">
-          <div className="text-xs font-bold uppercase tracking-wider text-orange-200/90">
+        <div className="space-y-3 pt-4 border-t border-zinc-100 mb-6">
+          <div className="text-xs font-bold uppercase tracking-wider text-zinc-800">
             Ưu đãi &amp; Quyền lợi:
           </div>
           <ul className="space-y-2.5">
             {(pkg.features || []).map((feature, idx) => (
-              <li key={idx} className="flex items-start gap-2.5 text-xs text-zinc-100 leading-snug">
-                <div className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center shrink-0 mt-0.5">
-                  <Check className="w-2.5 h-2.5 text-white" />
+              <li key={idx} className="flex items-start gap-2.5 text-xs text-zinc-700 leading-snug">
+                <div className="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+                  <Check className="w-2.5 h-2.5 stroke-[3]" />
                 </div>
-                <span>{feature}</span>
+                <span className="font-semibold text-zinc-800">{feature}</span>
               </li>
             ))}
           </ul>
         </div>
       </div>
 
-      {/* CTA Button */}
-      <div className="pt-2">
+      {/* CTA Buttons */}
+      <div className="pt-3 space-y-2">
         <button
           onClick={() => onSelectPackage(pkg.name)}
-          className="w-full py-3 px-4 rounded-2xl bg-white text-zinc-950 font-black text-sm hover:bg-zinc-100 active:scale-[0.98] transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer"
+          className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-[#FF6320] via-[#FF7330] to-[#FFA153] hover:brightness-110 active:scale-[0.98] text-white font-black text-sm shadow-lg shadow-orange-500/30 flex items-center justify-center gap-2 cursor-pointer transition-all"
         >
           <span>Đăng Ký Gói Này</span>
           <ArrowRight className="w-4 h-4" />
         </button>
 
+        <Link
+          href={`/goi-cuoc/${slug}`}
+          className="w-full py-2.5 px-4 rounded-2xl bg-white hover:bg-orange-50 active:scale-[0.98] text-[#FF6320] font-extrabold text-xs sm:text-sm border-2 border-orange-200 hover:border-[#FF6320] transition-all flex items-center justify-center gap-1.5 shadow-xs group"
+        >
+          <Eye className="w-4 h-4 group-hover:scale-110 transition-transform" />
+          <span>Xem Chi Tiết Gói Cước</span>
+        </Link>
+
         <a
           href={`tel:${contact.hotlineTel}`}
-          className="block text-center mt-2.5 text-[11px] text-orange-200/80 hover:text-white transition-colors"
+          className="block text-center pt-0.5 text-[11px] text-zinc-500 hover:text-[#FF6320] transition-colors font-medium"
         >
           <span>Hotline: {contact.hotline}</span>
         </a>
@@ -345,19 +357,56 @@ function PackageCard({
 
 export default function PackageSection({ onSelectPackage }: PackageSectionProps) {
   const { categories, packages } = usePackages();
+  const [selectedFilter, setSelectedFilter] = useState<'all' | string>('all');
+
+  const filterTabs = [
+    { key: 'all', label: 'Tất Cả Gói Cước' },
+    { key: 'personal', label: '1. Internet Cá Nhân' },
+    { key: 'combo', label: '2. Combo Internet + TV' },
+    { key: 'business', label: '3. Doanh Nghiệp & Mesh' },
+  ];
+
+  const visibleCategories =
+    selectedFilter === 'all'
+      ? categories
+      : categories.filter((c) => c.key === selectedFilter);
 
   return (
-    <section id="packages" className="py-16 bg-zinc-50 dark:bg-zinc-950 scroll-mt-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-16">
+    <section id="packages" className="py-16 bg-gradient-to-b from-white via-orange-50/25 to-white scroll-mt-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-12">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto">
-          <h2 className="text-2xl sm:text-4xl font-black text-zinc-900 dark:text-white tracking-tight">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-100 border border-orange-200 text-[#FF6320] text-xs font-black uppercase tracking-wider mb-3">
+            <Flame className="w-3.5 h-3.5 fill-[#FF6320]" />
+            Bảng Giá Lắp Mạng FPT 3 Miền 2026
+          </div>
+          <h2 className="text-2xl sm:text-4xl font-black text-zinc-900 tracking-tight">
             Chọn Gói Cước FPT 3 Miền Phù Hợp Với Bạn
           </h2>
+          <p className="mt-2 text-xs sm:text-sm text-zinc-600">
+            Tất cả các gói cước đều được miễn phí trang bị Modem Wi-Fi 6 thế hệ mới nhất và bảo hành trọn đời.
+          </p>
+
+          {/* Category Filter Tabs */}
+          <div className="flex flex-wrap items-center justify-center gap-2 mt-6">
+            {filterTabs.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setSelectedFilter(tab.key)}
+                className={`px-4 py-2 rounded-full text-xs sm:text-sm font-extrabold transition-all cursor-pointer shadow-xs ${
+                  selectedFilter === tab.key
+                    ? 'bg-gradient-to-r from-[#FF6320] to-[#FFA153] text-white shadow-md shadow-orange-500/25 scale-105'
+                    : 'bg-white hover:bg-orange-50 text-zinc-700 border border-orange-200 hover:border-orange-300'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Dynamic Categories & Packages */}
-        {categories.map((cat, catIdx) => {
+        {visibleCategories.map((cat, catIdx) => {
           const catPackages = packages.filter((p) => p.categoryKey === cat.key);
           if (catPackages.length === 0) return null;
 
@@ -368,10 +417,10 @@ export default function PackageSection({ onSelectPackage }: PackageSectionProps)
           let iconBg = 'bg-orange-500/10 text-[#FF6320]';
           if (cat.icon === 'Tv' || cat.key === 'combo') {
             IconComponent = Tv;
-            iconBg = 'bg-purple-500/10 text-purple-600 dark:text-purple-400';
+            iconBg = 'bg-purple-500/10 text-purple-600';
           } else if (cat.icon === 'Building2' || cat.key === 'business') {
             IconComponent = Building2;
-            iconBg = 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400';
+            iconBg = 'bg-emerald-500/10 text-emerald-600';
           }
 
           // Grid columns
@@ -385,17 +434,17 @@ export default function PackageSection({ onSelectPackage }: PackageSectionProps)
           return (
             <div key={cat.key || catIdx} id={anchorId} className="space-y-6 scroll-mt-24 pt-2">
               {/* Category Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-zinc-200 dark:border-zinc-800">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-orange-100">
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-2xl ${iconBg} flex items-center justify-center shrink-0`}>
                     <IconComponent className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white tracking-tight">
+                    <h3 className="text-xl sm:text-2xl font-black text-zinc-900 tracking-tight">
                       {cat.name}
                     </h3>
                     {cat.description && (
-                      <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
+                      <p className="text-xs sm:text-sm text-zinc-500 mt-0.5">
                         {cat.description}
                       </p>
                     )}
@@ -418,16 +467,16 @@ export default function PackageSection({ onSelectPackage }: PackageSectionProps)
         })}
 
         {/* Bottom Guarantee Banner */}
-        <div className="mt-12 p-6 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6 text-center md:text-left">
+        <div className="mt-12 p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-orange-50 via-white to-amber-50 border-2 border-orange-200/80 shadow-lg shadow-orange-500/5 flex flex-col md:flex-row items-center justify-between gap-6 text-center md:text-left">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-orange-100 dark:bg-orange-950/60 text-[#FF6320] flex items-center justify-center shrink-0">
-              <Shield className="w-6 h-6" />
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#FF6320] to-[#FFA153] text-white flex items-center justify-center shrink-0 shadow-md shadow-orange-500/20">
+              <Shield className="w-7 h-7" />
             </div>
             <div>
-              <h4 className="font-extrabold text-base text-zinc-900 dark:text-zinc-100">
+              <h4 className="font-black text-lg text-zinc-900">
                 Cam Kết Chất Lượng Dịch Vụ Của FPT 3 Miền
               </h4>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+              <p className="text-xs sm:text-sm text-zinc-600 mt-0.5">
                 Ký hợp đồng điện tử tại nhà &bull; Triển khai lắp đặt từ 12h - 36h &bull; Bảo trì trọn
                 đời miễn phí
               </p>
@@ -437,7 +486,7 @@ export default function PackageSection({ onSelectPackage }: PackageSectionProps)
           <div className="flex items-center gap-3">
             <button
               onClick={() => onSelectPackage('Tư vấn gói cước phù hợp nhất')}
-              className="px-6 py-2.5 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold text-xs hover:opacity-90 transition-opacity cursor-pointer whitespace-nowrap shadow-sm"
+              className="px-6 py-3 rounded-full bg-gradient-to-r from-[#FF6320] to-[#FFA153] hover:brightness-110 active:scale-95 text-white font-black text-xs sm:text-sm transition-all cursor-pointer whitespace-nowrap shadow-md shadow-orange-500/25"
             >
               Yêu Cầu Tư Vấn Miễn Phí
             </button>

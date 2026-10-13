@@ -44,25 +44,29 @@ export default function FAQSection() {
   };
 
   return (
-    <section id="faq" className="py-16 bg-zinc-50 dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800 scroll-mt-20">
+    <section id="faq" className="py-16 bg-gradient-to-b from-white via-orange-50/20 to-white border-t border-orange-100 scroll-mt-20">
       <div className="max-w-4xl mx-auto px-4 sm:px-6">
         <div className="text-center mb-10">
-          <h2 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-white tracking-tight">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-100 border border-orange-200 text-[#FF6320] text-xs font-black uppercase tracking-wider mb-3">
+            <HelpCircle className="w-3.5 h-3.5" />
+            Hỗ Trợ Khách Hàng
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-black text-zinc-900 tracking-tight">
             Câu Hỏi Thường Gặp Khi Lắp Wifi FPT 3 Miền
           </h2>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-3.5">
           {FAQS.map((faq, idx) => {
             const isOpen = openIndex === idx;
             return (
               <div
                 key={idx}
-                className="rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-xs transition-colors"
+                className="rounded-2xl bg-white border-2 border-orange-100/90 hover:border-orange-200 overflow-hidden shadow-xs transition-colors"
               >
                 <button
                   onClick={() => toggle(idx)}
-                  className="w-full px-6 py-4.5 text-left flex items-center justify-between gap-4 font-bold text-sm sm:text-base text-zinc-900 dark:text-zinc-100 hover:text-[#FF6320] transition-colors cursor-pointer"
+                  className="w-full px-6 py-4.5 text-left flex items-center justify-between gap-4 font-bold text-sm sm:text-base text-zinc-900 hover:text-[#FF6320] transition-colors cursor-pointer"
                 >
                   <span>{faq.question}</span>
                   <ChevronDown
@@ -71,7 +75,7 @@ export default function FAQSection() {
                   />
                 </button>
                 {isOpen && (
-                  <div className="px-6 pb-5 pt-1 text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed border-t border-zinc-100 dark:border-zinc-800 animate-in fade-in duration-150">
+                  <div className="px-6 pb-5 pt-1 text-xs sm:text-sm text-zinc-600 leading-relaxed border-t border-orange-50 animate-in fade-in duration-150">
                     {faq.answer}
                   </div>
                 )}

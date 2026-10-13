@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { Phone, Mail, MapPin, ShieldCheck, Wifi } from 'lucide-react';
 import { useContact } from '@/context/ContactContext';
 
@@ -78,12 +79,12 @@ export default function Footer() {
         <div className="space-y-3">
           <h4 className="font-bold text-white text-sm">Gói Cước 3 Miền</h4>
           <ul className="space-y-2 text-zinc-400">
-            <li><a href="#packages" className="hover:text-white transition-colors">Internet Gói Giga (300 Mbps)</a></li>
-            <li><a href="#packages" className="hover:text-white transition-colors">Internet Gói Sky (1 Gbps)</a></li>
-            <li><a href="#packages" className="hover:text-white transition-colors">Internet Gói F-Game Ultra</a></li>
-            <li><a href="#packages" className="hover:text-white transition-colors">Internet Gói Meta 1Gbps</a></li>
-            <li><a href="#combos" className="hover:text-white transition-colors">Combo Internet + Truyền Hình</a></li>
-            <li><a href="#business" className="hover:text-white transition-colors">Gói Doanh Nghiệp Lux 500</a></li>
+            <li><Link href="/goi-cuoc/giga" className="hover:text-white transition-colors">Internet Gói Giga (300 Mbps)</Link></li>
+            <li><Link href="/goi-cuoc/sky" className="hover:text-white transition-colors">Internet Gói Sky (1 Gbps)</Link></li>
+            <li><Link href="/goi-cuoc/f-game" className="hover:text-white transition-colors">Internet Gói F-Game Ultra</Link></li>
+            <li><Link href="/goi-cuoc/meta" className="hover:text-white transition-colors">Internet Gói Meta 1Gbps</Link></li>
+            <li><Link href="/#combos" className="hover:text-white transition-colors">Combo Internet + Truyền Hình</Link></li>
+            <li><Link href="/#business" className="hover:text-white transition-colors">Gói Doanh Nghiệp Lux 500</Link></li>
           </ul>
         </div>
 
@@ -91,8 +92,8 @@ export default function Footer() {
         <div className="space-y-3">
           <h4 className="font-bold text-white text-sm">Hỗ Trợ Khách Hàng</h4>
           <ul className="space-y-2 text-zinc-400">
-            <li><a href="#procedure" className="hover:text-white transition-colors">Hướng dẫn thủ tục hòa mạng</a></li>
-            <li><a href="#faq" className="hover:text-white transition-colors">Câu hỏi thường gặp</a></li>
+            <li><Link href="/#procedure" className="hover:text-white transition-colors">Hướng dẫn thủ tục hòa mạng</Link></li>
+            <li><Link href="/#faq" className="hover:text-white transition-colors">Câu hỏi thường gặp</Link></li>
             <li><a href={`tel:${contact.hotlineTel}`} className="hover:text-white transition-colors">Tổng đài tiếp nhận: {contact.hotline}</a></li>
             <li><a href={contact.zaloUrl} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors text-blue-400">Tư vấn Zalo 24/7</a></li>
             <li><a href="#" className="hover:text-white transition-colors">Khảo sát tuyến cáp miễn phí</a></li>

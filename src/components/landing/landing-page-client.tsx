@@ -31,7 +31,7 @@ export default function LandingPageClient() {
   return (
     <ContactProvider>
       <PackagesProvider>
-        <div className="min-h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col font-sans selection:bg-[#FF6320] selection:text-white">
+        <div className="min-h-screen bg-white text-zinc-900 flex flex-col font-sans selection:bg-[#FF6320] selection:text-white">
       {/* 1. Header with Region Dropdown & Hotline */}
       <Header />
 

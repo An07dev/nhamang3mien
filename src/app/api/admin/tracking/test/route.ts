@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAdminSession } from '@/lib/auth';
 import { getTrackingConfig } from '@/lib/meta-capi';
 import { normalizeAndHashPhone, normalizeAndHashName } from '@/lib/meta-capi';
+import { connectDB } from '@/lib/mongodb';
+import Lead from '@/models/Lead';
 
 export const dynamic = 'force-dynamic';
 

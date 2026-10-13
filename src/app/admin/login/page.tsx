@@ -31,9 +31,8 @@ export default function AdminLoginPage() {
       if (res.ok && data.success) {
         setSuccess(true);
         setTimeout(() => {
-          router.push('/admin');
-          router.refresh();
-        }, 600);
+          window.location.href = '/admin';
+        }, 500);
       } else {
         setError(data.error || 'Tên đăng nhập hoặc mật khẩu không chính xác');
       }

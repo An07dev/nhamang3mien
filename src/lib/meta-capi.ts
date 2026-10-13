@@ -91,7 +91,7 @@ export async function sendMetaCapiEvent(params: CapiEventParams): Promise<CapiRe
     }
 
     if (!config.pixelId || !config.capiToken) {
-      return { success: false, skipped: true, error: 'Chưa cấu hình Pixel ID hoặc CAPI Access Token' };
+      return { success: false, skipped: false, error: 'Đang bật tracking nhưng chưa điền Meta CAPI Access Token' };
     }
 
     const {

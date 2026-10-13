@@ -113,8 +113,8 @@ export default function ConsultModal({ isOpen, onClose, selectedPackage }: Consu
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg max-h-[92vh] flex flex-col rounded-3xl bg-white dark:bg-zinc-900 shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="relative w-full max-w-lg max-h-[92vh] flex flex-col rounded-3xl bg-white shadow-2xl border-2 border-orange-100 overflow-hidden">
         
         {/* Close button */}
         <button
@@ -126,7 +126,7 @@ export default function ConsultModal({ isOpen, onClose, selectedPackage }: Consu
         </button>
 
         {/* Modal Header */}
-        <div className="bg-gradient-to-r from-[#FF6320] to-[#FFA153] px-5 py-4 sm:px-6 sm:py-5 text-white flex items-center gap-3 sm:gap-4 shrink-0 pr-12">
+        <div className="bg-gradient-to-r from-[#FF6320] to-[#FFA153] px-5 py-4 sm:px-6 sm:py-5 text-white flex items-center gap-3 sm:gap-4 shrink-0 pr-12 shadow-sm">
           <img
             src="/logo.png"
             alt="Logo FPT 3 Miền"
@@ -146,16 +146,16 @@ export default function ConsultModal({ isOpen, onClose, selectedPackage }: Consu
         </div>
 
         {/* Modal Body */}
-        <div className="p-4 sm:p-6 overflow-y-auto">
+        <div className="p-5 sm:p-6 overflow-y-auto">
           {result?.success ? (
             <div className="py-6 text-center space-y-4">
-              <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center">
+              <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center">
                 <CheckCircle2 className="w-10 h-10" />
               </div>
-              <h4 className="text-xl font-black text-zinc-900 dark:text-white">
+              <h4 className="text-xl font-black text-zinc-900">
                 Đăng Ký Thành Công!
               </h4>
-              <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed px-2">
+              <p className="text-sm text-zinc-600 leading-relaxed px-2">
                 {result.message}
               </p>
               <div className="pt-2 flex justify-center gap-3">
@@ -173,13 +173,13 @@ export default function ConsultModal({ isOpen, onClose, selectedPackage }: Consu
           ) : (
             <form onSubmit={handleSubmit} className="space-y-3.5 sm:space-y-4">
               {result?.error && (
-                <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs font-semibold">
+                <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">
                   {result.error}
                 </div>
               )}
 
               <div>
-                <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                <label className="block text-xs font-bold text-zinc-700 mb-1">
                   Họ và tên của bạn <span className="text-[#FF6320]">*</span>
                 </label>
                 <input
@@ -188,12 +188,12 @@ export default function ConsultModal({ isOpen, onClose, selectedPackage }: Consu
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Ví dụ: Nguyễn Văn A"
-                  className="w-full h-11 px-4 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white text-base sm:text-sm focus:outline-none focus:border-[#FF6320] focus:ring-1 focus:ring-[#FF6320]"
+                  className="w-full h-11 px-4 rounded-xl border border-zinc-300 bg-white text-zinc-900 text-base sm:text-sm focus:outline-none focus:border-[#FF6320] focus:ring-2 focus:ring-orange-500/20"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                <label className="block text-xs font-bold text-zinc-700 mb-1">
                   Số điện thoại nhận tư vấn <span className="text-[#FF6320]">*</span>
                 </label>
                 <input
@@ -202,19 +202,19 @@ export default function ConsultModal({ isOpen, onClose, selectedPackage }: Consu
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="Ví dụ: 0987654321"
-                  className="w-full h-11 px-4 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white text-base sm:text-sm focus:outline-none focus:border-[#FF6320] focus:ring-1 focus:ring-[#FF6320]"
+                  className="w-full h-11 px-4 rounded-xl border border-zinc-300 bg-white text-zinc-900 text-base sm:text-sm focus:outline-none focus:border-[#FF6320] focus:ring-2 focus:ring-orange-500/20"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                  <label className="block text-xs font-bold text-zinc-700 mb-1">
                     Khu vực lắp đặt
                   </label>
                   <select
                     value={province}
                     onChange={(e) => setProvince(e.target.value)}
-                    className="w-full h-11 px-3 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white text-xs focus:outline-none focus:border-[#FF6320]"
+                    className="w-full h-11 px-3 rounded-xl border border-zinc-300 bg-white text-zinc-900 text-xs focus:outline-none focus:border-[#FF6320] focus:ring-2 focus:ring-orange-500/20"
                   >
                     <option value="TP. Hồ Chí Minh">TP. Hồ Chí Minh</option>
                     <option value="Hà Nội">Hà Nội</option>
@@ -228,13 +228,13 @@ export default function ConsultModal({ isOpen, onClose, selectedPackage }: Consu
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                  <label className="block text-xs font-bold text-zinc-700 mb-1">
                     Gói cước quan tâm
                   </label>
                   <select
                     value={packageInterest}
                     onChange={(e) => setPackageInterest(e.target.value)}
-                    className="w-full h-11 px-3 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white text-xs focus:outline-none focus:border-[#FF6320]"
+                    className="w-full h-11 px-3 rounded-xl border border-zinc-300 bg-white text-zinc-900 text-xs focus:outline-none focus:border-[#FF6320] focus:ring-2 focus:ring-orange-500/20"
                   >
                     {categories.map((cat) => {
                       const catPkgs = packages.filter(
@@ -245,13 +245,13 @@ export default function ConsultModal({ isOpen, onClose, selectedPackage }: Consu
                         <optgroup
                           key={cat.key}
                           label={cat.name}
-                          className="font-bold text-orange-600 dark:text-orange-400 bg-white dark:bg-zinc-800"
+                          className="font-bold text-orange-600 bg-white"
                         >
                           {catPkgs.map((pkg) => (
                             <option
                               key={pkg._id || pkg.id || pkg.name}
                               value={`${pkg.name} (${pkg.speed})`}
-                              className="font-normal text-zinc-900 dark:text-white bg-white dark:bg-zinc-800"
+                              className="font-normal text-zinc-900 bg-white"
                             >
                               {pkg.name} ({pkg.speed}) - {pkg.price}
                             </option>
@@ -267,7 +267,7 @@ export default function ConsultModal({ isOpen, onClose, selectedPackage }: Consu
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                <label className="block text-xs font-bold text-zinc-700 mb-1">
                   Địa chỉ lắp đặt hoặc ghi chú thêm (tuỳ chọn)
                 </label>
                 <input
@@ -275,14 +275,14 @@ export default function ConsultModal({ isOpen, onClose, selectedPackage }: Consu
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   placeholder="Ví dụ: Số nhà, ngõ/hẻm, tên toà nhà..."
-                  className="w-full h-11 px-4 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm focus:outline-none focus:border-[#FF6320] focus:ring-1 focus:ring-[#FF6320]"
+                  className="w-full h-11 px-4 rounded-xl border border-zinc-300 bg-white text-zinc-900 text-sm focus:outline-none focus:border-[#FF6320] focus:ring-2 focus:ring-orange-500/20"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full h-12 rounded-xl bg-gradient-to-r from-[#FF6320] to-[#FFA153] hover:brightness-105 active:scale-[0.99] text-white font-extrabold text-sm tracking-wide uppercase shadow-lg shadow-orange-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70"
+                className="w-full h-12 rounded-xl bg-gradient-to-r from-[#FF6320] to-[#FFA153] hover:brightness-105 active:scale-[0.99] text-white font-black text-sm tracking-wide uppercase shadow-lg shadow-orange-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70"
               >
                 {isLoading ? (
                   <>
@@ -296,7 +296,7 @@ export default function ConsultModal({ isOpen, onClose, selectedPackage }: Consu
                 )}
               </button>
 
-              <div className="flex items-center justify-center gap-2 text-[11px] text-zinc-500 dark:text-zinc-400 text-center pt-1">
+              <div className="flex items-center justify-center gap-2 text-[11px] text-zinc-500 text-center pt-1">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
                 <span>Bảo mật tuyệt đối &bull; Miễn phí khảo sát &amp; tư vấn</span>
               </div>
@@ -305,7 +305,7 @@ export default function ConsultModal({ isOpen, onClose, selectedPackage }: Consu
         </div>
 
         {/* Modal Footer Hotline */}
-        <div className="px-6 py-3 bg-zinc-50 dark:bg-zinc-800/60 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
+        <div className="px-6 py-3 bg-orange-50/60 border-t border-orange-100 flex items-center justify-between text-xs text-zinc-600">
           <span>Hỗ trợ trực tiếp qua tổng đài:</span>
           <a
             href={`tel:${contact.hotlineTel}`}

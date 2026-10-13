@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Phone, MapPin, ChevronDown, Menu, X, Wifi } from 'lucide-react';
 import { useContact } from '@/context/ContactContext';
 
@@ -26,7 +27,7 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-3 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
         {/* Left: Brand Logo */}
         <div className="flex items-center gap-3 sm:gap-6">
-          <a href="#" className="flex items-center gap-2 group">
+          <Link href="/" className="flex items-center gap-2 group">
             {/* Logo: FPT 3 Miền */}
             <div className="flex items-center gap-2 sm:gap-3">
               <img
@@ -48,7 +49,7 @@ export default function Header() {
                 </span>
               </div>
             </div>
-          </a>
+          </Link>
 
           {/* Province Selector Dropdown (Desktop) */}
           <div className="relative hidden md:block">
@@ -86,25 +87,25 @@ export default function Header() {
 
         {/* Center: Navigation Links (Desktop) */}
         <nav className="hidden lg:flex items-center gap-6 text-sm font-medium text-zinc-700">
-          <a href="#packages" className="hover:text-[#FF6320] transition-colors">
+          <Link href="/#packages" className="hover:text-[#FF6320] transition-colors">
             Gói Cước
-          </a>
-          <a href="#wifi6" className="hover:text-[#FF6320] transition-colors flex items-center gap-1.5 font-semibold text-orange-600">
+          </Link>
+          <Link href="/#wifi6" className="hover:text-[#FF6320] transition-colors flex items-center gap-1.5 font-semibold text-orange-600">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-[#FF6320]"></span>
             </span>
             Wi-Fi 6 Mới
-          </a>
-          <a href="#reviews" className="hover:text-[#FF6320] transition-colors">
+          </Link>
+          <Link href="/#reviews" className="hover:text-[#FF6320] transition-colors">
             Đánh Giá 3 Miền
-          </a>
-          <a href="#procedure" className="hover:text-[#FF6320] transition-colors">
+          </Link>
+          <Link href="/#procedure" className="hover:text-[#FF6320] transition-colors">
             Thủ Tục
-          </a>
-          <a href="#faq" className="hover:text-[#FF6320] transition-colors">
+          </Link>
+          <Link href="/#faq" className="hover:text-[#FF6320] transition-colors">
             Hỏi Đáp
-          </a>
+          </Link>
         </nav>
 
         {/* Right: Hotline CTA */}
@@ -153,16 +154,16 @@ export default function Header() {
             </select>
           </div>
           <div className="flex flex-col gap-1 text-sm font-semibold text-zinc-800">
-            <a
-              href="#packages"
+            <Link
+              href="/#packages"
               onClick={() => setIsMobileMenuOpen(false)}
               className="px-3.5 py-2.5 rounded-xl hover:bg-orange-50 hover:text-[#FF6320] transition-colors flex items-center justify-between"
             >
               <span>1. Bảng Gói Cước Internet</span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-100 text-[#FF6320] font-bold">Từ 195k</span>
-            </a>
-            <a
-              href="#wifi6"
+            </Link>
+            <Link
+              href="/#wifi6"
               onClick={() => setIsMobileMenuOpen(false)}
               className="px-3.5 py-2.5 rounded-xl bg-orange-500/10 text-[#FF6320] font-bold flex items-center justify-between"
             >
@@ -171,29 +172,29 @@ export default function Header() {
                 2. Công Nghệ Modem Wi-Fi 6
               </span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#FF6320] text-white">Mới Nhất</span>
-            </a>
-            <a
-              href="#reviews"
+            </Link>
+            <Link
+              href="/#reviews"
               onClick={() => setIsMobileMenuOpen(false)}
               className="px-3.5 py-2.5 rounded-xl hover:bg-orange-50 hover:text-[#FF6320] transition-colors flex items-center justify-between"
             >
               <span>3. Đánh Giá Khách Hàng 3 Miền</span>
               <span className="text-[10px] text-amber-600 font-bold">★ 4.9/5.0</span>
-            </a>
-            <a
-              href="#procedure"
+            </Link>
+            <Link
+              href="/#procedure"
               onClick={() => setIsMobileMenuOpen(false)}
               className="px-3.5 py-2.5 rounded-xl hover:bg-orange-50 hover:text-[#FF6320] transition-colors"
             >
               4. Quy Trình &amp; Thủ Tục Lắp Đặt (12h - 36h)
-            </a>
-            <a
-              href="#faq"
+            </Link>
+            <Link
+              href="/#faq"
               onClick={() => setIsMobileMenuOpen(false)}
               className="px-3.5 py-2.5 rounded-xl hover:bg-orange-50 hover:text-[#FF6320] transition-colors"
             >
               5. Câu Hỏi Thường Gặp &amp; Tư Vấn
-            </a>
+            </Link>
           </div>
 
           {/* Quick Hotline in Mobile Menu */}

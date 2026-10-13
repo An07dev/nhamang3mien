@@ -34,15 +34,21 @@ export default function ProcedureSection({ onOpenConsult }: ProcedureSectionProp
   ];
 
   return (
-    <section id="procedure" className="py-14 sm:py-20 bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 scroll-mt-20">
+    <section id="procedure" className="py-14 sm:py-20 bg-gradient-to-b from-white via-amber-50/20 to-white border-t border-orange-100 scroll-mt-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
 
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
-
-          <h2 className="text-2xl sm:text-4xl font-black text-zinc-900 dark:text-white tracking-tight">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-100 border border-orange-200 text-[#FF6320] text-xs font-black uppercase tracking-wider mb-3">
+            <Clock className="w-3.5 h-3.5" />
+            Triển Khai Nhanh Chóng
+          </div>
+          <h2 className="text-2xl sm:text-4xl font-black text-zinc-900 tracking-tight">
             Thủ Tục Đơn Giản &bull; Lắp Đặt Siêu Tốc
           </h2>
+          <p className="mt-2 text-xs sm:text-sm text-zinc-600">
+            Kỹ thuật viên hoàn tất kết nối tận nhà từ 12h - 36h, đo kiểm đường truyền đạt chuẩn mới ký nghiệm thu.
+          </p>
         </div>
 
         {/* Steps Grid (3 Columns) */}
@@ -52,32 +58,32 @@ export default function ProcedureSection({ onOpenConsult }: ProcedureSectionProp
             return (
               <div
                 key={item.step}
-                className="relative rounded-2xl sm:rounded-3xl p-5 sm:p-6 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/80 dark:border-zinc-700/60 hover:shadow-lg transition-all flex flex-col justify-between group"
+                className="relative rounded-3xl p-6 sm:p-7 bg-white border-2 border-orange-100/90 shadow-md hover:shadow-xl hover:border-orange-300 transition-all flex flex-col justify-between group"
               >
                 <div>
                   {/* Icon and Title on the same line, Step number on the right */}
-                  <div className="flex items-center justify-between gap-3 mb-3">
+                  <div className="flex items-center justify-between gap-3 mb-4">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gradient-to-tr ${item.color} text-white flex items-center justify-center shadow-md shrink-0 group-hover:scale-110 transition-transform`}>
+                      <div className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr ${item.color} text-white flex items-center justify-center shadow-md shrink-0 group-hover:scale-110 transition-transform`}>
                         <Icon className="w-5 h-5" />
                       </div>
-                      <h3 className="text-base sm:text-lg font-extrabold text-zinc-900 dark:text-white tracking-tight leading-tight">
+                      <h3 className="text-base sm:text-lg font-black text-zinc-900 tracking-tight leading-tight">
                         {item.title}
                       </h3>
                     </div>
-                    <span className="text-2xl sm:text-3xl font-black text-zinc-300 dark:text-zinc-700 select-none shrink-0">
+                    <span className="text-3xl sm:text-4xl font-black text-orange-200 select-none shrink-0">
                       {item.step}
                     </span>
                   </div>
 
-                  <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                  <p className="text-xs sm:text-sm text-zinc-600 leading-relaxed">
                     {item.desc}
                   </p>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-zinc-200/60 dark:border-zinc-700/40 flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Miễn phí 100%</span>
+                <div className="mt-5 pt-3 border-t border-zinc-100 flex items-center gap-1.5 text-xs font-bold text-emerald-600">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Miễn phí 100% khảo sát &amp; tư vấn</span>
                 </div>
               </div>
             );
