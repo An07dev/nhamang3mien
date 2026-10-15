@@ -20,8 +20,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search')?.trim() || '';
     const status = searchParams.get('status')?.trim() || 'all';
-    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
-    const limit = Math.min(100, Math.max(10, parseInt(searchParams.get('limit') || '50', 10)));
+    const rawPage = parseInt(searchParams.get('page') || '1', 10);
+    const page = Math.max(1, Number.isFinite(rawPage) ? rawPage : 1);
+    const rawLimit = parseInt(searchParams.get('limit') || '10', 10);
+    const limit = Math.min(100, Math.max(10, Number.isFinite(rawLimit) ? rawLimit : 10));
 
     // 3. Xây dựng điều kiện truy vấn
     const query: Record<string, unknown> = {};

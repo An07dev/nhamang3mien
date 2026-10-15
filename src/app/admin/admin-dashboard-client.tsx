@@ -158,6 +158,15 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
   const [editNote, setEditNote] = useState('');
   const [isSavingLead, setIsSavingLead] = useState(false);
   const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
+  const [leadCurrentPage, setLeadCurrentPage] = useState(1);
+  const [leadPageSize, setLeadPageSize] = useState(10);
+  const [leadTotalFiltered, setLeadTotalFiltered] = useState(0);
+  const [leadTotalPages, setLeadTotalPages] = useState(1);
+
+  // Tự động quay về trang 1 khi thay đổi bộ lọc, từ khóa tìm kiếm hoặc số dòng/trang của leads
+  useEffect(() => {
+    setLeadCurrentPage(1);
+  }, [leadStatusFilter, leadSearch, leadPageSize]);
 
   // Packages State
   const [packages, setPackages] = useState<PackageData[]>([]);
@@ -217,12 +226,15 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
   }, []);
 
   // 1. Fetch Leads
-  const fetchLeads = useCallback(async () => {
+  const fetchLeads = useCallback(async (pageOverride?: number) => {
     setIsLeadLoading(true);
     try {
+      const targetPage = typeof pageOverride === 'number' ? pageOverride : leadCurrentPage;
       const params = new URLSearchParams();
       if (leadSearch.trim()) params.append('search', leadSearch.trim());
       if (leadStatusFilter !== 'all') params.append('status', leadStatusFilter);
+      params.append('page', String(targetPage));
+      params.append('limit', String(leadPageSize));
 
       const res = await fetch(`/api/admin/leads?${params.toString()}`);
       if (res.status === 401) {
@@ -232,6 +244,17 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
       const json = await res.json();
       if (json.success) {
         setLeads(json.data || []);
+        if (json.pagination) {
+          const total = json.pagination.total ?? 0;
+          const totalPages = json.pagination.totalPages ?? 1;
+          setLeadTotalFiltered(total);
+          setLeadTotalPages(totalPages);
+
+          // Nếu trang hiện tại lớn hơn tổng số trang thực tế thì tự chuyển về trang cuối
+          if (totalPages > 0 && targetPage > totalPages) {
+            setLeadCurrentPage(totalPages);
+          }
+        }
         if (json.stats) setStats(json.stats);
       }
     } catch (err) {
@@ -239,16 +262,16 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
     } finally {
       setIsLeadLoading(false);
     }
-  }, [leadSearch, leadStatusFilter, router]);
+  }, [leadSearch, leadStatusFilter, leadCurrentPage, leadPageSize, router]);
 
   useEffect(() => {
     if (activeTab === 'leads') {
       const debounceTimer = setTimeout(() => {
         fetchLeads();
-      }, 250);
+      }, leadSearch ? 250 : 0);
       return () => clearTimeout(debounceTimer);
     }
-  }, [activeTab, fetchLeads]);
+  }, [activeTab, fetchLeads, leadSearch]);
 
   // 2. Fetch Packages & Categories
   const fetchPackagesAndCategories = useCallback(async () => {
@@ -1060,6 +1083,11 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
     return true;
   });
 
+  // Phân trang danh sách khách hàng (Leads)
+  const safeCurrentLeadPage = Math.min(Math.max(1, leadCurrentPage), Math.max(1, leadTotalPages));
+  const leadStartIndex = (safeCurrentLeadPage - 1) * leadPageSize;
+  const leadEndIndex = Math.min(leadStartIndex + leads.length, leadTotalFiltered);
+
   // Phân trang dữ liệu nhật ký sự kiện CAPI
   const totalFilteredLogs = filteredTrackingLogs.length;
   const totalLogPages = Math.max(1, Math.ceil(totalFilteredLogs / logPageSize));
@@ -1069,7 +1097,7 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
   const paginatedTrackingLogs = filteredTrackingLogs.slice(logStartIndex, logEndIndex);
 
   // Helper tính dải số trang hiển thị (kèm dấu ...)
-  const getLogPaginationRange = (current: number, total: number) => {
+  const getPaginationRange = (current: number, total: number) => {
     if (total <= 7) {
       return Array.from({ length: total }, (_, i) => i + 1);
     }
@@ -1081,6 +1109,7 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
     }
     return [1, '...', current - 1, current, current + 1, '...', total];
   };
+  const getLogPaginationRange = getPaginationRange;
 
   // Helper render badge cho từng loại sự kiện CAPI
   const renderEventBadge = (eventName: string, size: 'sm' | 'xs' = 'sm') => {
@@ -1376,13 +1405,19 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
                 <input
                   type="text"
                   value={leadSearch}
-                  onChange={(e) => setLeadSearch(e.target.value)}
+                  onChange={(e) => {
+                    setLeadSearch(e.target.value);
+                    setLeadCurrentPage(1);
+                  }}
                   placeholder="Tìm theo tên, SĐT, tỉnh thành..."
                   className="w-full h-9 sm:h-10 pl-9 sm:pl-10 pr-9 rounded-lg sm:rounded-xl bg-black/40 border border-white/15 text-white placeholder-zinc-500 text-xs sm:text-sm focus:outline-none focus:border-[#FF6320] focus:ring-1 focus:ring-[#FF6320] transition-colors"
                 />
                 {leadSearch && (
                   <button
-                    onClick={() => setLeadSearch('')}
+                    onClick={() => {
+                      setLeadSearch('');
+                      setLeadCurrentPage(1);
+                    }}
                     className="absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-400 hover:text-white"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -1392,7 +1427,10 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
 
               <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
                 <button
-                  onClick={() => setLeadStatusFilter('all')}
+                  onClick={() => {
+                    setLeadStatusFilter('all');
+                    setLeadCurrentPage(1);
+                  }}
                   className={`px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${leadStatusFilter === 'all'
                     ? 'bg-white text-zinc-900 shadow-md font-bold'
                     : 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
@@ -1401,7 +1439,10 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
                   Tất cả ({stats.total})
                 </button>
                 <button
-                  onClick={() => setLeadStatusFilter('pending')}
+                  onClick={() => {
+                    setLeadStatusFilter('pending');
+                    setLeadCurrentPage(1);
+                  }}
                   className={`px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer flex items-center gap-1 sm:gap-1.5 ${leadStatusFilter === 'pending'
                     ? 'bg-amber-500 text-zinc-950 font-bold shadow-md shadow-amber-500/20'
                     : 'bg-amber-500/10 text-amber-300 hover:bg-amber-500/20'
@@ -1411,7 +1452,10 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
                   Chờ gọi ({stats.pending})
                 </button>
                 <button
-                  onClick={() => setLeadStatusFilter('contacted')}
+                  onClick={() => {
+                    setLeadStatusFilter('contacted');
+                    setLeadCurrentPage(1);
+                  }}
                   className={`px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer flex items-center gap-1 sm:gap-1.5 ${leadStatusFilter === 'contacted'
                     ? 'bg-blue-500 text-white font-bold shadow-md shadow-blue-500/20'
                     : 'bg-blue-500/10 text-blue-300 hover:bg-blue-500/20'
@@ -1420,7 +1464,10 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
                   Đã gọi ({stats.contacted})
                 </button>
                 <button
-                  onClick={() => setLeadStatusFilter('completed')}
+                  onClick={() => {
+                    setLeadStatusFilter('completed');
+                    setLeadCurrentPage(1);
+                  }}
                   className={`px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer flex items-center gap-1 sm:gap-1.5 ${leadStatusFilter === 'completed'
                     ? 'bg-emerald-500 text-white font-bold shadow-md shadow-emerald-500/20'
                     : 'bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
@@ -1459,7 +1506,7 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
                 <div className="flex items-center gap-2">
                   <h2 className="font-bold text-white text-sm sm:text-base">Danh Sách Khách Hàng Đăng Ký</h2>
                   <span className="text-xs px-2.5 py-0.5 rounded-full bg-white/10 text-zinc-300 font-mono font-semibold">
-                    {leads.length} đơn
+                    {leadTotalFiltered} đơn
                   </span>
                 </div>
                 {isLeadLoading && (
@@ -1485,7 +1532,16 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
-                    {leads.length === 0 ? (
+                    {isLeadLoading ? (
+                      <tr>
+                        <td colSpan={8} className="py-12 text-center text-zinc-400">
+                          <div className="flex flex-col items-center justify-center gap-2">
+                            <RefreshCw className="w-6 h-6 text-[#FF6320] animate-spin" />
+                            <p className="font-semibold text-zinc-300 text-sm">Đang tải danh sách khách hàng...</p>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : leads.length === 0 ? (
                       <tr>
                         <td colSpan={8} className="py-12 text-center text-zinc-400">
                           <div className="max-w-xs mx-auto space-y-2">
@@ -1510,7 +1566,7 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
                             onClick={() => handleOpenLeadDetail(item)}
                             className="hover:bg-white/[0.03] transition-colors cursor-pointer group"
                           >
-                            <td className="py-3.5 px-4 font-mono text-zinc-500 text-xs">{index + 1}</td>
+                            <td className="py-3.5 px-4 font-mono text-zinc-500 text-xs">{leadStartIndex + index + 1}</td>
                             <td className="py-3.5 px-4">
                               <div className="font-bold text-white group-hover:text-[#FFA153] transition-colors">
                                 {item.name}
@@ -1637,7 +1693,12 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
 
               {/* Mobile Card Layout */}
               <div className="md:hidden divide-y divide-white/10">
-                {leads.length === 0 ? (
+                {isLeadLoading ? (
+                  <div className="py-10 text-center text-zinc-400 p-4 flex flex-col items-center justify-center gap-2">
+                    <RefreshCw className="w-6 h-6 text-[#FF6320] animate-spin" />
+                    <p className="font-semibold text-zinc-300 text-xs">Đang tải danh sách khách hàng...</p>
+                  </div>
+                ) : leads.length === 0 ? (
                   <div className="py-10 text-center text-zinc-400 p-4">
                     <Users className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
                     <p className="font-semibold text-zinc-300 text-sm">Không tìm thấy khách hàng nào</p>
@@ -1662,7 +1723,7 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0 flex-1">
                             <div className="font-bold text-white text-sm truncate flex items-center gap-1.5">
-                              <span className="text-zinc-500 font-mono text-xs">{index + 1}.</span>
+                              <span className="text-zinc-500 font-mono text-xs">{leadStartIndex + index + 1}.</span>
                               <span className="truncate">{item.name}</span>
                             </div>
                             <div className="text-[11px] text-zinc-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
@@ -1774,6 +1835,112 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
                       </div>
                     );
                   })
+                )}
+              </div>
+
+              {/* Thanh Phân Trang Khách Hàng (Pagination Bar) */}
+              <div className="px-3 sm:px-4 py-3 bg-white/[0.03] border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-400">
+                {/* Left: Tóm tắt & Chọn số dòng/trang */}
+                <div className="flex flex-wrap items-center justify-between sm:justify-start gap-3 w-full sm:w-auto">
+                  <div className="text-[11px] sm:text-xs">
+                    Hiển thị <span className="font-bold text-white">{leadTotalFiltered > 0 ? leadStartIndex + 1 : 0}</span> - <span className="font-bold text-white">{leadEndIndex}</span> trên <span className="font-bold text-emerald-400">{leadTotalFiltered}</span> khách hàng
+                  </div>
+
+                  <div className="flex items-center gap-1.5 text-[11px] text-zinc-400">
+                    <span>Số dòng:</span>
+                    <select
+                      value={leadPageSize}
+                      onChange={(e) => {
+                        setLeadPageSize(Number(e.target.value));
+                        setLeadCurrentPage(1);
+                      }}
+                      className="h-7 px-2 rounded-lg bg-black/50 border border-white/15 text-white text-[11px] font-medium focus:outline-none focus:border-[#FF6320] cursor-pointer"
+                    >
+                      <option value={10}>10 / trang</option>
+                      <option value={20}>20 / trang</option>
+                      <option value={50}>50 / trang</option>
+                      <option value={100}>100 / trang</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Right: Các nút bấm chuyển trang */}
+                {leadTotalPages > 1 && (
+                  <div className="flex items-center gap-1 self-center sm:self-auto">
+                    {/* Trang đầu */}
+                    <button
+                      type="button"
+                      onClick={() => setLeadCurrentPage(1)}
+                      disabled={safeCurrentLeadPage === 1 || isLeadLoading}
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
+                      title="Trang đầu"
+                    >
+                      <ChevronsLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    </button>
+
+                    {/* Trang trước */}
+                    <button
+                      type="button"
+                      onClick={() => setLeadCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={safeCurrentLeadPage === 1 || isLeadLoading}
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
+                      title="Trang trước"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    </button>
+
+                    {/* Dải số trang */}
+                    <div className="flex items-center gap-1">
+                      {getPaginationRange(safeCurrentLeadPage, leadTotalPages).map((p, idx) => {
+                        if (p === '...') {
+                          return (
+                            <span key={`lead-ellipsis-${idx}`} className="w-6 text-center text-zinc-500 font-bold text-xs select-none">
+                              …
+                            </span>
+                          );
+                        }
+                        const pageNum = Number(p);
+                        const isActive = pageNum === safeCurrentLeadPage;
+                        return (
+                          <button
+                            key={`lead-page-${pageNum}`}
+                            type="button"
+                            onClick={() => setLeadCurrentPage(pageNum)}
+                            disabled={isLeadLoading}
+                            className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center ${
+                              isActive
+                                ? 'bg-[#FF6320] text-white shadow-md shadow-orange-500/30 scale-105'
+                                : 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Trang sau */}
+                    <button
+                      type="button"
+                      onClick={() => setLeadCurrentPage((p) => Math.min(leadTotalPages, p + 1))}
+                      disabled={safeCurrentLeadPage === leadTotalPages || isLeadLoading}
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
+                      title="Trang sau"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    </button>
+
+                    {/* Trang cuối */}
+                    <button
+                      type="button"
+                      onClick={() => setLeadCurrentPage(leadTotalPages)}
+                      disabled={safeCurrentLeadPage === leadTotalPages || isLeadLoading}
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
+                      title="Trang cuối"
+                    >
+                      <ChevronsRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
