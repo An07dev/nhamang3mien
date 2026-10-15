@@ -36,7 +36,16 @@ import FloatingWidgets from '@/components/landing/floating-widgets';
 import { useContact } from '@/context/ContactContext';
 import { usePackages, PackageItem } from '@/context/PackagesContext';
 import { getPackageSlug, getCategoryTitle, getPackageSpecs, getPackageFaq } from '@/lib/package-utils';
-import { trackPixel, generateEventId, getFbp, getFbc } from '@/lib/meta-pixel';
+import {
+  trackPixel,
+  generateEventId,
+  getFbp,
+  getFbc,
+  trackViewContent,
+  trackInitiateCheckout,
+  trackFindLocation,
+  trackCustomizeProduct,
+} from '@/lib/meta-pixel';
 
 interface PackageDetailClientProps {
   packageData: PackageItem;
@@ -74,6 +83,17 @@ export default function PackageDetailClient({
   const specs = getPackageSpecs(currentPkg);
   const faqs = getPackageFaq(currentPkg);
 
+  // 1. Tự động bắn sự kiện ViewContent khi vào trang chi tiết gói cước
+  React.useEffect(() => {
+    trackViewContent({
+      id: currentPkg.id,
+      name: currentPkg.name,
+      category: categoryName,
+      price: currentPkg.price,
+      speed: currentPkg.speed,
+    });
+  }, [currentPkg.id, currentPkg.name, categoryName]);
+
   // Form đăng ký nhanh tại trang chi tiết
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -91,8 +111,34 @@ export default function PackageDetailClient({
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
 
   const handleOpenConsult = (pkgName?: string) => {
-    setModalPackageName(pkgName || currentPkg.name);
+    const targetName = pkgName || currentPkg.name;
+    setModalPackageName(targetName);
     setIsModalOpen(true);
+    trackInitiateCheckout({
+      packageName: targetName,
+      category: categoryName,
+      price: currentPkg.price,
+      source: 'Nút Tư Vấn Trang Chi Tiết',
+    });
+  };
+
+  const handleProvinceChange = (newProv: string) => {
+    setProvince(newProv);
+    trackFindLocation(newProv);
+  };
+
+  const handlePayCycleChange = (newCycle: string) => {
+    setPayCycle(newCycle);
+    const cycleLabel =
+      newCycle === '12_months'
+        ? 'Trả trước 12 tháng'
+        : newCycle === '6_months'
+        ? 'Trả trước 6 tháng'
+        : 'Trả từng tháng';
+    trackCustomizeProduct(currentPkg.name, {
+      name: 'Kỳ thanh toán',
+      value: cycleLabel,
+    });
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -144,6 +190,19 @@ export default function PackageDetailClient({
 
       const data = await res.json();
       if (res.ok && data.success) {
+        // Bắn sự kiện CompleteRegistration cho Meta Ads
+        trackPixel(
+          'CompleteRegistration',
+          {
+            content_name: `${currentPkg.name} (${currentPkg.speed})`,
+            content_category: categoryName,
+            currency: 'VND',
+            value: parseInt(currentPkg.price.replace(/\D/g, '') || '0', 10),
+            status: 'success',
+          },
+          { eventID: eventId }
+        );
+
         setFormResult({
           success: true,
           message: 'Đăng ký thành công! Nhân viên FPT 3 Miền sẽ liên hệ hỗ trợ bạn trong vòng 5 - 10 phút.',
@@ -364,7 +423,7 @@ export default function PackageDetailClient({
                     {/* Option 1: 6 Months */}
                     <button
                       type="button"
-                      onClick={() => setPayCycle('6_months')}
+                      onClick={() => handlePayCycleChange('6_months')}
                       className={`p-3.5 rounded-2xl border-2 text-left transition-all cursor-pointer relative ${
                         payCycle === '6_months'
                           ? 'border-[#FF6320] bg-orange-50/90 ring-4 ring-orange-500/15 shadow-sm'
@@ -385,7 +444,7 @@ export default function PackageDetailClient({
                     {/* Option 2: 12 Months */}
                     <button
                       type="button"
-                      onClick={() => setPayCycle('12_months')}
+                      onClick={() => handlePayCycleChange('12_months')}
                       className={`p-3.5 rounded-2xl border-2 text-left transition-all cursor-pointer relative ${
                         payCycle === '12_months'
                           ? 'border-[#FF6320] bg-orange-50/90 ring-4 ring-orange-500/15 shadow-sm'
@@ -406,7 +465,7 @@ export default function PackageDetailClient({
                     {/* Option 3: Monthly */}
                     <button
                       type="button"
-                      onClick={() => setPayCycle('monthly')}
+                      onClick={() => handlePayCycleChange('monthly')}
                       className={`p-3.5 rounded-2xl border-2 text-left transition-all cursor-pointer relative ${
                         payCycle === 'monthly'
                           ? 'border-[#FF6320] bg-orange-50/90 ring-4 ring-orange-500/15 shadow-sm'
@@ -490,7 +549,7 @@ export default function PackageDetailClient({
                         </label>
                         <select
                           value={province}
-                          onChange={(e) => setProvince(e.target.value)}
+                          onChange={(e) => handleProvinceChange(e.target.value)}
                           className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 bg-white text-sm text-zinc-900 focus:outline-none focus:border-[#FF6320] focus:ring-2 focus:ring-orange-500/20"
                         >
                           {PROVINCES.map((p) => (

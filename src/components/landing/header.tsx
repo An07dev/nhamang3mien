@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Phone, MapPin, ChevronDown, Menu, X, Wifi } from 'lucide-react';
 import { useContact } from '@/context/ContactContext';
+import { trackFindLocation, trackContact } from '@/lib/meta-pixel';
 
 const PROVINCES = [
   'TP. Hồ Chí Minh',
@@ -73,6 +74,7 @@ export default function Header() {
                     onClick={() => {
                       setSelectedProvince(prov);
                       setIsProvinceOpen(false);
+                      trackFindLocation(prov);
                     }}
                     className={`w-full text-left px-4 py-2 text-xs hover:bg-orange-50 transition-colors ${selectedProvince === prov ? 'font-bold text-[#FF6320] bg-orange-50/70' : 'text-zinc-700'
                       }`}
@@ -112,6 +114,12 @@ export default function Header() {
         <div className="flex items-center gap-2 sm:gap-3">
           <a
             href={`tel:${contact.hotlineTel}`}
+            onClick={() => {
+              trackContact({
+                method: 'header_hotline',
+                phone: contact.hotlineTel,
+              });
+            }}
             className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-gradient-to-r from-[#FF6320] to-[#FFA153] text-white shadow-md hover:shadow-orange-500/25 hover:brightness-105 transition-all group font-bold text-xs sm:text-sm"
           >
             <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
@@ -145,7 +153,10 @@ export default function Header() {
             </span>
             <select
               value={selectedProvince}
-              onChange={(e) => setSelectedProvince(e.target.value)}
+              onChange={(e) => {
+                setSelectedProvince(e.target.value);
+                trackFindLocation(e.target.value);
+              }}
               className="w-full text-sm font-semibold p-2.5 border border-orange-200 rounded-xl text-zinc-800 bg-orange-50/40 focus:outline-none focus:border-[#FF6320]"
             >
               {PROVINCES.map((p) => (

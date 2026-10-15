@@ -1,6 +1,7 @@
 'use client';
 
 import { Wifi, Cpu, Zap, ShieldCheck, Layers, Gauge, Check, X, ArrowRight, Sparkles } from 'lucide-react';
+import { trackInitiateCheckout } from '@/lib/meta-pixel';
 
 interface Wifi6ShowcaseProps {
   onOpenConsult: () => void;
@@ -188,7 +189,14 @@ export default function Wifi6Showcase({ onOpenConsult }: Wifi6ShowcaseProps) {
           </div>
 
           <button
-            onClick={onOpenConsult}
+            onClick={() => {
+              trackInitiateCheckout({
+                packageName: 'Modem Wi-Fi 6 Chuẩn AX Miễn Phí',
+                category: 'Thiết Bị Modem',
+                source: 'Khối Giới Thiệu Wi-Fi 6',
+              });
+              onOpenConsult();
+            }}
             className="px-6 py-3 rounded-full bg-gradient-to-r from-[#FF6320] to-[#FFA153] text-white font-extrabold text-xs sm:text-sm shadow-xl shadow-orange-500/25 hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 shrink-0 cursor-pointer"
           >
             <span>Nhận Modem Wi-Fi 6 Miễn Phí</span>

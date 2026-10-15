@@ -40,7 +40,15 @@ export default function FAQSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   const toggle = (idx: number) => {
-    setOpenIndex(openIndex === idx ? null : idx);
+    const isOpening = openIndex !== idx;
+    setOpenIndex(isOpening ? idx : null);
+    if (isOpening && FAQS[idx]) {
+      import('@/lib/meta-pixel').then((m) =>
+        m.trackCustomPixel('ViewFAQ', {
+          question: FAQS[idx].question,
+        })
+      );
+    }
   };
 
   return (

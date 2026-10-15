@@ -150,6 +150,26 @@ export async function POST(request: NextRequest) {
             },
           },
         });
+
+        // Đồng thời bắn sự kiện CompleteRegistration lên CAPI
+        sendMetaCapiEvent({
+          eventName: 'CompleteRegistration',
+          eventId: finalEventId,
+          eventSourceUrl: request.headers.get('referer') || 'https://fpt3mien.com/',
+          userData: {
+            phone: cleanPhone,
+            name: name.trim(),
+            clientIp,
+            userAgent,
+            fbp: finalFbp,
+            fbc: finalFbc,
+          },
+          customData: {
+            content_name: newLead.packageInterest,
+            lead_id: newLead._id.toString(),
+            status: 'success',
+          },
+        }).catch((e) => console.warn('[CAPI CompleteRegistration Error]:', e?.message));
       }
     } catch (capiErr: any) {
       console.warn('[CAPI Trigger Error]:', capiErr?.message);

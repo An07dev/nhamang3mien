@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Script from 'next/script';
-import { trackPixel } from '@/lib/meta-pixel';
+import { trackPixel, trackContact } from '@/lib/meta-pixel';
 import { PublicTrackingConfig } from '@/lib/tracking-config';
 
 export default function MetaPixelTracker() {
@@ -41,12 +41,12 @@ export default function MetaPixelTracker() {
 
       const href = target.getAttribute('href') || '';
       if (href.startsWith('tel:')) {
-        trackPixel('Contact', {
+        trackContact({
           method: 'phone_call',
           href,
         });
       } else if (href.includes('zalo.me')) {
-        trackPixel('Contact', {
+        trackContact({
           method: 'zalo_chat',
           href,
         });

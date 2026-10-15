@@ -3,7 +3,15 @@
 import { useState, useEffect } from 'react';
 import { Wifi, Gift, Zap, ShieldCheck, CheckCircle2, Loader2, Sparkles, Tv } from 'lucide-react';
 import { usePackages } from '@/context/PackagesContext';
-import { trackPixel, generateEventId, getFbp, getFbc } from '@/lib/meta-pixel';
+import {
+  trackPixel,
+  generateEventId,
+  getFbp,
+  getFbc,
+  trackInitiateCheckout,
+  trackFindLocation,
+  trackCustomizeProduct,
+} from '@/lib/meta-pixel';
 
 interface HeroBannerProps {
   onOpenModal?: (packageName?: string) => void;
@@ -71,6 +79,18 @@ export default function HeroBanner({ onOpenModal }: HeroBannerProps) {
       const data = await response.json();
 
       if (response.ok && data.success) {
+        // Bắn sự kiện CompleteRegistration cho Meta Ads
+        trackPixel(
+          'CompleteRegistration',
+          {
+            content_name: packageInterest,
+            content_category: province,
+            currency: 'VND',
+            status: 'success',
+          },
+          { eventID: eventId }
+        );
+
         setResult({
           success: true,
           message: data.message || 'Đăng ký thành công! Chuyên viên FPT 3 Miền sẽ liên hệ hỗ trợ trong vòng 5 phút.',
@@ -224,6 +244,13 @@ export default function HeroBanner({ onOpenModal }: HeroBannerProps) {
                       type="tel"
                       required
                       value={phone}
+                      onFocus={() => {
+                        trackInitiateCheckout({
+                          packageName: packageInterest,
+                          category: province,
+                          source: 'Hero Banner Form',
+                        });
+                      }}
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="Ví dụ: 0987654321"
                       className="w-full h-11 px-4 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-900 placeholder-zinc-400 text-sm focus:bg-white focus:outline-none focus:border-[#FF6320] focus:ring-1 focus:ring-[#FF6320] transition-colors"
@@ -237,7 +264,11 @@ export default function HeroBanner({ onOpenModal }: HeroBannerProps) {
                       </label>
                       <select
                         value={province}
-                        onChange={(e) => setProvince(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setProvince(val);
+                          trackFindLocation(val);
+                        }}
                         className="w-full h-11 px-3 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-900 text-xs focus:bg-white focus:outline-none focus:border-[#FF6320]"
                       >
                         <option value="TP. Hồ Chí Minh">TP. Hồ Chí Minh</option>
@@ -257,7 +288,11 @@ export default function HeroBanner({ onOpenModal }: HeroBannerProps) {
                       </label>
                       <select
                         value={packageInterest}
-                        onChange={(e) => setPackageInterest(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setPackageInterest(val);
+                          trackCustomizeProduct(val, { name: 'Gói cước', value: val });
+                        }}
                         className="w-full h-11 px-3 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-900 text-xs focus:bg-white focus:outline-none focus:border-[#FF6320]"
                       >
                         {categories.map((cat) => {

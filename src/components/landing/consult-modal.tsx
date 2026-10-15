@@ -4,7 +4,15 @@ import { useState, useEffect } from 'react';
 import { X, CheckCircle2, Loader2, ShieldCheck, Wifi, Phone } from 'lucide-react';
 import { useContact } from '@/context/ContactContext';
 import { usePackages } from '@/context/PackagesContext';
-import { trackPixel, generateEventId, getFbp, getFbc } from '@/lib/meta-pixel';
+import {
+  trackPixel,
+  generateEventId,
+  getFbp,
+  getFbc,
+  trackInitiateCheckout,
+  trackFindLocation,
+  trackCustomizeProduct,
+} from '@/lib/meta-pixel';
 
 interface ConsultModalProps {
   isOpen: boolean;
@@ -28,6 +36,16 @@ export default function ConsultModal({ isOpen, onClose, selectedPackage }: Consu
       setPackageInterest(selectedPackage);
     }
   }, [selectedPackage]);
+
+  useEffect(() => {
+    if (isOpen) {
+      trackInitiateCheckout({
+        packageName: packageInterest,
+        category: province,
+        source: 'Modal Tư Vấn',
+      });
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -88,6 +106,18 @@ export default function ConsultModal({ isOpen, onClose, selectedPackage }: Consu
       const data = await response.json();
 
       if (response.ok && data.success) {
+        // Bắn sự kiện CompleteRegistration cho Meta Ads
+        trackPixel(
+          'CompleteRegistration',
+          {
+            content_name: packageInterest,
+            content_category: province,
+            currency: 'VND',
+            status: 'success',
+          },
+          { eventID: eventId }
+        );
+
         setResult({
           success: true,
           message: data.message || 'Đăng ký thành công! Chuyên viên FPT 3 Miền sẽ liên hệ hỗ trợ quý khách trong 5 phút.',
@@ -213,7 +243,11 @@ export default function ConsultModal({ isOpen, onClose, selectedPackage }: Consu
                   </label>
                   <select
                     value={province}
-                    onChange={(e) => setProvince(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setProvince(val);
+                      trackFindLocation(val);
+                    }}
                     className="w-full h-11 px-3 rounded-xl border border-zinc-300 bg-white text-zinc-900 text-xs focus:outline-none focus:border-[#FF6320] focus:ring-2 focus:ring-orange-500/20"
                   >
                     <option value="TP. Hồ Chí Minh">TP. Hồ Chí Minh</option>
@@ -233,7 +267,11 @@ export default function ConsultModal({ isOpen, onClose, selectedPackage }: Consu
                   </label>
                   <select
                     value={packageInterest}
-                    onChange={(e) => setPackageInterest(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setPackageInterest(val);
+                      trackCustomizeProduct(val, { name: 'Gói cước', value: val });
+                    }}
                     className="w-full h-11 px-3 rounded-xl border border-zinc-300 bg-white text-zinc-900 text-xs focus:outline-none focus:border-[#FF6320] focus:ring-2 focus:ring-orange-500/20"
                   >
                     {categories.map((cat) => {

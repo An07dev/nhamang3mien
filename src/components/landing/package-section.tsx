@@ -6,6 +6,11 @@ import { Wifi, Tv, Building2, Check, Flame, Shield, ArrowRight, Phone, Eye } fro
 import { useContact } from '@/context/ContactContext';
 import { usePackages, PackageItem, CategoryItem } from '@/context/PackagesContext';
 import { getPackageSlug } from '@/lib/package-utils';
+import {
+  trackInitiateCheckout,
+  trackViewContent,
+  trackSearchCategory,
+} from '@/lib/meta-pixel';
 
 export type { PackageItem, CategoryItem };
 
@@ -329,7 +334,15 @@ function PackageCard({
       {/* CTA Buttons */}
       <div className="pt-3 space-y-2">
         <button
-          onClick={() => onSelectPackage(pkg.name)}
+          onClick={() => {
+            trackInitiateCheckout({
+              packageName: pkg.name,
+              category: pkg.categoryKey,
+              price: pkg.price,
+              source: 'Bảng Giá Trang Chủ',
+            });
+            onSelectPackage(pkg.name);
+          }}
           className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-[#FF6320] via-[#FF7330] to-[#FFA153] hover:brightness-110 active:scale-[0.98] text-white font-black text-sm shadow-lg shadow-orange-500/30 flex items-center justify-center gap-2 cursor-pointer transition-all"
         >
           <span>Đăng Ký Gói Này</span>
@@ -338,6 +351,15 @@ function PackageCard({
 
         <Link
           href={`/goi-cuoc/${slug}`}
+          onClick={() => {
+            trackViewContent({
+              id: pkg.id,
+              name: pkg.name,
+              category: pkg.categoryKey,
+              price: pkg.price,
+              speed: pkg.speed,
+            });
+          }}
           className="w-full py-2.5 px-4 rounded-2xl bg-white hover:bg-orange-50 active:scale-[0.98] text-[#FF6320] font-extrabold text-xs sm:text-sm border-2 border-orange-200 hover:border-[#FF6320] transition-all flex items-center justify-center gap-1.5 shadow-xs group"
         >
           <Eye className="w-4 h-4 group-hover:scale-110 transition-transform" />
@@ -392,7 +414,10 @@ export default function PackageSection({ onSelectPackage }: PackageSectionProps)
             {filterTabs.map((tab) => (
               <button
                 key={tab.key}
-                onClick={() => setSelectedFilter(tab.key)}
+                onClick={() => {
+                  setSelectedFilter(tab.key);
+                  trackSearchCategory(tab.label, tab.key);
+                }}
                 className={`px-4 py-2 rounded-full text-xs sm:text-sm font-extrabold transition-all cursor-pointer shadow-xs ${
                   selectedFilter === tab.key
                     ? 'bg-gradient-to-r from-[#FF6320] to-[#FFA153] text-white shadow-md shadow-orange-500/25 scale-105'
