@@ -50,17 +50,17 @@ export async function GET() {
   try {
     await connectDB();
 
-    // 1. Lấy nhật ký từ collection CapiLog mới (giới hạn 150 sự kiện gần nhất)
+    // 1. Lấy nhật ký từ collection CapiLog mới (giới hạn 300 sự kiện gần nhất)
     const capiLogs = await CapiLog.find()
       .sort({ sentAt: -1 })
-      .limit(150)
+      .limit(300)
       .lean();
 
     // 2. Lấy thêm nhật ký lịch sử gắn liền với Lead
     const leads = await Lead.find({ 'capiEvents.0': { $exists: true } })
       .select('name phone province packageInterest clientMetadata capiEvents createdAt')
       .sort({ updatedAt: -1 })
-      .limit(150)
+      .limit(300)
       .lean();
 
     const seenEventIds = new Set<string>();

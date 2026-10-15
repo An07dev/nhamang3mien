@@ -50,6 +50,10 @@ import {
   CheckCircle,
   Globe,
   HelpCircle,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from 'lucide-react';
 import Link from 'next/link';
 import { CapiLogItem, CapiStats } from '@/app/api/admin/tracking/logs/route';
@@ -369,6 +373,13 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
   const [logSearch, setLogSearch] = useState('');
   const [selectedLog, setSelectedLog] = useState<CapiLogItem | null>(null);
   const [copiedPixelId, setCopiedPixelId] = useState(false);
+  const [logCurrentPage, setLogCurrentPage] = useState(1);
+  const [logPageSize, setLogPageSize] = useState(10);
+
+  // Tự động quay về trang 1 khi thay đổi bộ lọc, từ khóa tìm kiếm hoặc số dòng/trang
+  useEffect(() => {
+    setLogCurrentPage(1);
+  }, [logFilter, logSearch, logPageSize]);
 
   const fetchTrackingSettings = useCallback(async () => {
     setIsTrackingLoading(true);
@@ -1048,6 +1059,28 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
     }
     return true;
   });
+
+  // Phân trang dữ liệu nhật ký sự kiện CAPI
+  const totalFilteredLogs = filteredTrackingLogs.length;
+  const totalLogPages = Math.max(1, Math.ceil(totalFilteredLogs / logPageSize));
+  const safeCurrentLogPage = Math.min(Math.max(1, logCurrentPage), totalLogPages);
+  const logStartIndex = (safeCurrentLogPage - 1) * logPageSize;
+  const logEndIndex = Math.min(logStartIndex + logPageSize, totalFilteredLogs);
+  const paginatedTrackingLogs = filteredTrackingLogs.slice(logStartIndex, logEndIndex);
+
+  // Helper tính dải số trang hiển thị (kèm dấu ...)
+  const getLogPaginationRange = (current: number, total: number) => {
+    if (total <= 7) {
+      return Array.from({ length: total }, (_, i) => i + 1);
+    }
+    if (current <= 4) {
+      return [1, 2, 3, 4, 5, '...', total];
+    }
+    if (current >= total - 3) {
+      return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
+    }
+    return [1, '...', current - 1, current, current + 1, '...', total];
+  };
 
   // Helper render badge cho từng loại sự kiện CAPI
   const renderEventBadge = (eventName: string, size: 'sm' | 'xs' = 'sm') => {
@@ -3040,7 +3073,7 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
                           </td>
                         </tr>
                       ) : (
-                        filteredTrackingLogs.map((log) => (
+                        paginatedTrackingLogs.map((log) => (
                           <tr key={log.id} className="hover:bg-white/[0.02] transition-colors">
                             <td className="py-3 px-4 whitespace-nowrap text-zinc-400 font-mono text-[11px]">
                               {new Date(log.sentAt).toLocaleString('vi-VN', {
@@ -3129,7 +3162,7 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
                       </div>
                     </div>
                   ) : (
-                    filteredTrackingLogs.map((log) => (
+                    paginatedTrackingLogs.map((log) => (
                       <div key={log.id} className="p-3 space-y-2 text-xs">
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0 flex-1">
@@ -3165,9 +3198,106 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
                   )}
                 </div>
 
-                <div className="px-3 sm:px-4 py-2.5 sm:py-3 bg-white/[0.02] border-t border-white/5 flex items-center justify-between text-[10px] sm:text-[11px] text-zinc-500">
-                  <span>{filteredTrackingLogs.length} sự kiện gần nhất</span>
-                  <span className="hidden sm:inline">Lưu trữ trực tiếp trong tài liệu</span>
+                {/* Thanh Phân Trang (Pagination Bar) */}
+                <div className="px-3 sm:px-4 py-3 bg-white/[0.03] border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-400">
+                  {/* Left: Tóm tắt & Chọn số dòng/trang */}
+                  <div className="flex flex-wrap items-center justify-between sm:justify-start gap-3 w-full sm:w-auto">
+                    <div className="text-[11px] sm:text-xs">
+                      Hiển thị <span className="font-bold text-white">{totalFilteredLogs > 0 ? logStartIndex + 1 : 0}</span> - <span className="font-bold text-white">{logEndIndex}</span> trên <span className="font-bold text-emerald-400">{totalFilteredLogs}</span> sự kiện
+                    </div>
+
+                    <div className="flex items-center gap-1.5 text-[11px] text-zinc-400">
+                      <span>Số dòng:</span>
+                      <select
+                        value={logPageSize}
+                        onChange={(e) => setLogPageSize(Number(e.target.value))}
+                        className="h-7 px-2 rounded-lg bg-black/50 border border-white/15 text-white text-[11px] font-medium focus:outline-none focus:border-blue-500 cursor-pointer"
+                      >
+                        <option value={10}>10 / trang</option>
+                        <option value={20}>20 / trang</option>
+                        <option value={50}>50 / trang</option>
+                        <option value={100}>100 / trang</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Right: Các nút bấm chuyển trang */}
+                  {totalLogPages > 1 && (
+                    <div className="flex items-center gap-1 self-center sm:self-auto">
+                      {/* Trang đầu */}
+                      <button
+                        type="button"
+                        onClick={() => setLogCurrentPage(1)}
+                        disabled={safeCurrentLogPage === 1}
+                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
+                        title="Trang đầu"
+                      >
+                        <ChevronsLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      </button>
+
+                      {/* Trang trước */}
+                      <button
+                        type="button"
+                        onClick={() => setLogCurrentPage((p) => Math.max(1, p - 1))}
+                        disabled={safeCurrentLogPage === 1}
+                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
+                        title="Trang trước"
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      </button>
+
+                      {/* Dải số trang */}
+                      <div className="flex items-center gap-1">
+                        {getLogPaginationRange(safeCurrentLogPage, totalLogPages).map((p, idx) => {
+                          if (p === '...') {
+                            return (
+                              <span key={`ellipsis-${idx}`} className="w-6 text-center text-zinc-500 font-bold text-xs select-none">
+                                …
+                              </span>
+                            );
+                          }
+                          const pageNum = Number(p);
+                          const isActive = pageNum === safeCurrentLogPage;
+                          return (
+                            <button
+                              key={`page-${pageNum}`}
+                              type="button"
+                              onClick={() => setLogCurrentPage(pageNum)}
+                              className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center ${
+                                isActive
+                                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30 scale-105'
+                                  : 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
+                              }`}
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Trang sau */}
+                      <button
+                        type="button"
+                        onClick={() => setLogCurrentPage((p) => Math.min(totalLogPages, p + 1))}
+                        disabled={safeCurrentLogPage === totalLogPages}
+                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
+                        title="Trang sau"
+                      >
+                        <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      </button>
+
+                      {/* Trang cuối */}
+                      <button
+                        type="button"
+                        onClick={() => setLogCurrentPage(totalLogPages)}
+                        disabled={safeCurrentLogPage === totalLogPages}
+                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
+                        title="Trang cuối"
+                      >
+                        <ChevronsRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
