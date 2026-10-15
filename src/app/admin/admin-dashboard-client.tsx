@@ -2860,160 +2860,159 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
             {/* REAL-TIME CAPI AUDIT STREAM (EVENT LOGS) */}
             {/* ============================================================ */}
             <div className="bg-[#141A29] border border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl space-y-4 sm:space-y-5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-white/10 pb-4">
-                <div className="flex items-start gap-2.5 sm:gap-3">
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
-                    <Activity className="w-4 h-4 sm:w-5 sm:h-5" />
+              {/* Row 1: Header (Tiêu Đề & Nút Xóa Nhật Ký) */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center shrink-0">
+                    <Activity className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                    <h3 className="text-base sm:text-lg font-bold text-white whitespace-nowrap flex items-center gap-2">
                       <span>Nhật Ký Sự Kiện CAPI Thời Gian Thực</span>
                     </h3>
-                    <p className="text-xs text-zinc-400 mt-0.5 hidden sm:block">
+                    <p className="text-xs text-zinc-400 mt-0.5">
                       Giám sát các sự kiện được máy chủ gửi lên Meta Conversions API kèm mã deduplication event_id
                     </p>
                   </div>
                 </div>
 
-                {/* Actions & Filter Pills */}
-                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 self-start sm:self-auto py-1">
-                  <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto scrollbar-none">
-                    <button
-                      type="button"
-                      onClick={() => setLogFilter('all')}
-                      className={`px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${logFilter === 'all'
-                        ? 'bg-white/20 text-white'
-                        : 'bg-white/5 text-zinc-400 hover:text-white'
-                        }`}
-                    >
-                      Tất Cả ({trackingStats.totalEvents})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setLogFilter('PageView')}
-                      className={`px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${logFilter === 'PageView'
-                        ? 'bg-sky-500/30 text-sky-300 border border-sky-500/40'
-                        : 'bg-white/5 text-zinc-400 hover:text-white'
-                        }`}
-                    >
-                      Xem Trang ({trackingStats.pageViewEvents || 0})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setLogFilter('ViewContent')}
-                      className={`px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${logFilter === 'ViewContent'
-                        ? 'bg-indigo-500/30 text-indigo-300 border border-indigo-500/40'
-                        : 'bg-white/5 text-zinc-400 hover:text-white'
-                        }`}
-                    >
-                      Xem Gói ({trackingStats.viewContentEvents || 0})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setLogFilter('InitiateCheckout')}
-                      className={`px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${logFilter === 'InitiateCheckout'
-                        ? 'bg-orange-500/30 text-orange-300 border border-orange-500/40'
-                        : 'bg-white/5 text-zinc-400 hover:text-white'
-                        }`}
-                    >
-                      Khởi Tạo ({trackingStats.initiateCheckoutEvents || 0})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setLogFilter('FindLocation')}
-                      className={`px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${logFilter === 'FindLocation'
-                        ? 'bg-teal-500/30 text-teal-300 border border-teal-500/40'
-                        : 'bg-white/5 text-zinc-400 hover:text-white'
-                        }`}
-                    >
-                      Khu Vực ({trackingStats.findLocationEvents || 0})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setLogFilter('Search')}
-                      className={`px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${logFilter === 'Search'
-                        ? 'bg-purple-500/30 text-purple-300 border border-purple-500/40'
-                        : 'bg-white/5 text-zinc-400 hover:text-white'
-                        }`}
-                    >
-                      Tìm Kiếm ({trackingStats.searchEvents || 0})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setLogFilter('CustomizeProduct')}
-                      className={`px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${logFilter === 'CustomizeProduct'
-                        ? 'bg-pink-500/30 text-pink-300 border border-pink-500/40'
-                        : 'bg-white/5 text-zinc-400 hover:text-white'
-                        }`}
-                    >
-                      Tùy Chọn ({trackingStats.customizeProductEvents || 0})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setLogFilter('ViewFAQ')}
-                      className={`px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${logFilter === 'ViewFAQ'
-                        ? 'bg-yellow-500/30 text-yellow-300 border border-yellow-500/40'
-                        : 'bg-white/5 text-zinc-400 hover:text-white'
-                        }`}
-                    >
-                      FAQ ({trackingStats.viewFaqEvents || 0})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setLogFilter('Lead')}
-                      className={`px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${logFilter === 'Lead'
-                        ? 'bg-amber-500/30 text-amber-300 border border-amber-500/40'
-                        : 'bg-white/5 text-zinc-400 hover:text-white'
-                        }`}
-                    >
-                      Lead ({trackingStats.leadEvents})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setLogFilter('Contact')}
-                      className={`px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${logFilter === 'Contact'
-                        ? 'bg-cyan-500/30 text-cyan-300 border border-cyan-500/40'
-                        : 'bg-white/5 text-zinc-400 hover:text-white'
-                        }`}
-                    >
-                      Contact ({trackingStats.contactEvents})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setLogFilter('CompleteRegistration')}
-                      className={`px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${logFilter === 'CompleteRegistration'
-                        ? 'bg-emerald-500/30 text-emerald-300 border border-emerald-500/40'
-                        : 'bg-white/5 text-zinc-400 hover:text-white'
-                        }`}
-                    >
-                      Hoàn Tất ({trackingStats.completedEvents})
-                    </button>
-                    {trackingStats.failedEvents > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setLogFilter('failed')}
-                        className={`px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${logFilter === 'failed'
-                          ? 'bg-red-500/30 text-red-300 border border-red-500/40'
-                          : 'bg-red-500/10 text-red-400'
-                          }`}
-                      >
-                        Lỗi ({trackingStats.failedEvents})
-                      </button>
-                    )}
-                  </div>
+                {/* Nút Xóa Toàn Bộ Nhật Ký */}
+                <button
+                  type="button"
+                  onClick={handleClearTrackingLogs}
+                  disabled={isClearingLogs || trackingLogs.length === 0}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border border-red-500/30 text-red-400 bg-red-500/10 hover:bg-red-500/20 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap shrink-0 self-start sm:self-auto"
+                  title="Xóa toàn bộ nhật ký sự kiện CAPI"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>{isClearingLogs ? 'Đang xóa...' : 'Xóa Nhật Ký'}</span>
+                </button>
+              </div>
 
-                  {/* Nút Xóa Toàn Bộ Nhật Ký */}
+              {/* Row 2: Thanh Nút Lọc Sự Kiện (Filter Pills - Hàng Riêng Biệt Full Width) */}
+              <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-white/10">
+                <button
+                  type="button"
+                  onClick={() => setLogFilter('all')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${logFilter === 'all'
+                    ? 'bg-white/20 text-white shadow-sm'
+                    : 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
+                    }`}
+                >
+                  Tất Cả ({trackingStats.totalEvents})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLogFilter('PageView')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${logFilter === 'PageView'
+                    ? 'bg-sky-500/30 text-sky-300 border border-sky-500/40 shadow-sm'
+                    : 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
+                    }`}
+                >
+                  Xem Trang ({trackingStats.pageViewEvents || 0})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLogFilter('ViewContent')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${logFilter === 'ViewContent'
+                    ? 'bg-indigo-500/30 text-indigo-300 border border-indigo-500/40 shadow-sm'
+                    : 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
+                    }`}
+                >
+                  Xem Gói ({trackingStats.viewContentEvents || 0})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLogFilter('InitiateCheckout')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${logFilter === 'InitiateCheckout'
+                    ? 'bg-orange-500/30 text-orange-300 border border-orange-500/40 shadow-sm'
+                    : 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
+                    }`}
+                >
+                  Khởi Tạo ({trackingStats.initiateCheckoutEvents || 0})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLogFilter('FindLocation')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${logFilter === 'FindLocation'
+                    ? 'bg-teal-500/30 text-teal-300 border border-teal-500/40 shadow-sm'
+                    : 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
+                    }`}
+                >
+                  Khu Vực ({trackingStats.findLocationEvents || 0})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLogFilter('Search')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${logFilter === 'Search'
+                    ? 'bg-purple-500/30 text-purple-300 border border-purple-500/40 shadow-sm'
+                    : 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
+                    }`}
+                >
+                  Tìm Kiếm ({trackingStats.searchEvents || 0})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLogFilter('CustomizeProduct')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${logFilter === 'CustomizeProduct'
+                    ? 'bg-pink-500/30 text-pink-300 border border-pink-500/40 shadow-sm'
+                    : 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
+                    }`}
+                >
+                  Tùy Chọn ({trackingStats.customizeProductEvents || 0})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLogFilter('ViewFAQ')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${logFilter === 'ViewFAQ'
+                    ? 'bg-yellow-500/30 text-yellow-300 border border-yellow-500/40 shadow-sm'
+                    : 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
+                    }`}
+                >
+                  FAQ ({trackingStats.viewFaqEvents || 0})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLogFilter('Lead')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${logFilter === 'Lead'
+                    ? 'bg-amber-500/30 text-amber-300 border border-amber-500/40 shadow-sm'
+                    : 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
+                    }`}
+                >
+                  Lead ({trackingStats.leadEvents})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLogFilter('Contact')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${logFilter === 'Contact'
+                    ? 'bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                    : 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
+                    }`}
+                >
+                  Contact ({trackingStats.contactEvents})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLogFilter('CompleteRegistration')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${logFilter === 'CompleteRegistration'
+                    ? 'bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 shadow-sm'
+                    : 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
+                    }`}
+                >
+                  Hoàn Tất ({trackingStats.completedEvents})
+                </button>
+                {trackingStats.failedEvents > 0 && (
                   <button
                     type="button"
-                    onClick={handleClearTrackingLogs}
-                    disabled={isClearingLogs || trackingLogs.length === 0}
-                    className="px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border border-red-500/30 text-red-400 bg-red-500/10 hover:bg-red-500/20 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap ml-auto sm:ml-2"
-                    title="Xóa toàn bộ nhật ký sự kiện CAPI"
+                    onClick={() => setLogFilter('failed')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${logFilter === 'failed'
+                      ? 'bg-red-500/30 text-red-300 border border-red-500/40 shadow-sm'
+                      : 'bg-red-500/10 text-red-400 hover:bg-red-500/20'
+                      }`}
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>{isClearingLogs ? 'Đang xóa...' : 'Xóa Nhật Ký'}</span>
+                    Lỗi ({trackingStats.failedEvents})
                   </button>
-                </div>
+                )}
               </div>
 
               {/* Search Log Bar */}
