@@ -44,9 +44,7 @@ export default function FAQSection() {
     setOpenIndex(isOpening ? idx : null);
     if (isOpening && FAQS[idx]) {
       import('@/lib/meta-pixel').then((m) =>
-        m.trackCustomPixel('ViewFAQ', {
-          question: FAQS[idx].question,
-        })
+        m.trackViewFAQ(FAQS[idx].question)
       );
     }
   };

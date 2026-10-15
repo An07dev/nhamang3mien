@@ -45,6 +45,7 @@ import {
   trackInitiateCheckout,
   trackFindLocation,
   trackCustomizeProduct,
+  trackViewFAQ,
 } from '@/lib/meta-pixel';
 
 interface PackageDetailClientProps {
@@ -843,7 +844,13 @@ export default function PackageDetailClient({
                 >
                   <button
                     type="button"
-                    onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
+                    onClick={() => {
+                      const next = isOpen ? null : idx;
+                      setOpenFaqIndex(next);
+                      if (!isOpen && faq.q) {
+                        trackViewFAQ(faq.q);
+                      }
+                    }}
                     className="w-full p-4 sm:p-5 text-left flex items-center justify-between gap-4 font-bold text-sm sm:text-base text-zinc-900 hover:text-[#FF6320] transition-colors cursor-pointer"
                   >
                     <span>{faq.q}</span>

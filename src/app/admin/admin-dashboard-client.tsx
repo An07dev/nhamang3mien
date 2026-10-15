@@ -46,9 +46,10 @@ import {
   KeyRound,
   Activity,
   Radio,
-  ArrowRight,
   ShieldCheck,
   CheckCircle,
+  Globe,
+  HelpCircle,
 } from 'lucide-react';
 import Link from 'next/link';
 import { CapiLogItem, CapiStats } from '@/app/api/admin/tracking/logs/route';
@@ -336,15 +337,35 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
   const [trackingLogs, setTrackingLogs] = useState<CapiLogItem[]>([]);
   const [trackingStats, setTrackingStats] = useState<CapiStats>({
     totalEvents: 0,
+    pageViewEvents: 0,
+    viewContentEvents: 0,
+    initiateCheckoutEvents: 0,
     leadEvents: 0,
     contactEvents: 0,
+    findLocationEvents: 0,
+    searchEvents: 0,
+    customizeProductEvents: 0,
+    viewFaqEvents: 0,
     completedEvents: 0,
     successfulEvents: 0,
     failedEvents: 0,
     successRate: 100,
   });
   const [isLogsLoading, setIsLogsLoading] = useState(false);
-  const [logFilter, setLogFilter] = useState<'all' | 'Lead' | 'Contact' | 'CompleteRegistration' | 'failed'>('all');
+  const [logFilter, setLogFilter] = useState<
+    | 'all'
+    | 'PageView'
+    | 'ViewContent'
+    | 'InitiateCheckout'
+    | 'FindLocation'
+    | 'Search'
+    | 'CustomizeProduct'
+    | 'ViewFAQ'
+    | 'Lead'
+    | 'Contact'
+    | 'CompleteRegistration'
+    | 'failed'
+  >('all');
   const [logSearch, setLogSearch] = useState('');
   const [selectedLog, setSelectedLog] = useState<CapiLogItem | null>(null);
   const [copiedPixelId, setCopiedPixelId] = useState(false);
@@ -406,8 +427,15 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
         setTrackingLogs([]);
         setTrackingStats({
           totalEvents: 0,
+          pageViewEvents: 0,
+          viewContentEvents: 0,
+          initiateCheckoutEvents: 0,
           leadEvents: 0,
           contactEvents: 0,
+          findLocationEvents: 0,
+          searchEvents: 0,
+          customizeProductEvents: 0,
+          viewFaqEvents: 0,
           completedEvents: 0,
           successfulEvents: 0,
           failedEvents: 0,
@@ -990,6 +1018,13 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
   // Filtered CAPI Tracking Logs
   const filteredTrackingLogs = trackingLogs.filter((log) => {
     if (logFilter === 'failed' && log.success) return false;
+    if (logFilter === 'PageView' && log.eventName !== 'PageView') return false;
+    if (logFilter === 'ViewContent' && log.eventName !== 'ViewContent') return false;
+    if (logFilter === 'InitiateCheckout' && log.eventName !== 'InitiateCheckout') return false;
+    if (logFilter === 'FindLocation' && log.eventName !== 'FindLocation') return false;
+    if (logFilter === 'Search' && log.eventName !== 'Search') return false;
+    if (logFilter === 'CustomizeProduct' && log.eventName !== 'CustomizeProduct') return false;
+    if (logFilter === 'ViewFAQ' && log.eventName !== 'ViewFAQ') return false;
     if (logFilter === 'Lead' && log.eventName !== 'Lead') return false;
     if (logFilter === 'Contact' && log.eventName !== 'Contact') return false;
     if (
@@ -1006,12 +1041,100 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
       const matchEventId = (log.eventId || '').toLowerCase().includes(q);
       const matchEventName = (log.eventName || '').toLowerCase().includes(q);
       const matchProvince = (log.province || '').toLowerCase().includes(q);
-      if (!matchName && !matchPhone && !matchEventId && !matchEventName && !matchProvince) {
+      const matchPackage = (log.packageName || '').toLowerCase().includes(q);
+      if (!matchName && !matchPhone && !matchEventId && !matchEventName && !matchProvince && !matchPackage) {
         return false;
       }
     }
     return true;
   });
+
+  // Helper render badge cho từng loại sự kiện CAPI
+  const renderEventBadge = (eventName: string, size: 'sm' | 'xs' = 'sm') => {
+    const iconClass = size === 'xs' ? 'w-2 h-2' : 'w-2.5 h-2.5';
+    const textClass = size === 'xs' ? 'text-[10px] px-2 py-0.5' : 'text-[11px] px-2.5 py-0.5';
+
+    switch (eventName) {
+      case 'PageView':
+        return (
+          <span className={`inline-flex items-center gap-1 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30 font-bold ${textClass}`}>
+            <Globe className={iconClass} />
+            Xem Trang
+          </span>
+        );
+      case 'ViewContent':
+        return (
+          <span className={`inline-flex items-center gap-1 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-bold ${textClass}`}>
+            <Eye className={iconClass} />
+            Xem Gói
+          </span>
+        );
+      case 'InitiateCheckout':
+        return (
+          <span className={`inline-flex items-center gap-1 rounded-full bg-orange-500/20 text-orange-300 border border-orange-500/30 font-bold ${textClass}`}>
+            <Zap className={iconClass} />
+            Khởi Tạo
+          </span>
+        );
+      case 'FindLocation':
+        return (
+          <span className={`inline-flex items-center gap-1 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30 font-bold ${textClass}`}>
+            <MapPin className={iconClass} />
+            Khu Vực
+          </span>
+        );
+      case 'Search':
+        return (
+          <span className={`inline-flex items-center gap-1 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold ${textClass}`}>
+            <Filter className={iconClass} />
+            Tìm Kiếm
+          </span>
+        );
+      case 'CustomizeProduct':
+        return (
+          <span className={`inline-flex items-center gap-1 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30 font-bold ${textClass}`}>
+            <Sliders className={iconClass} />
+            Tùy Chọn
+          </span>
+        );
+      case 'ViewFAQ':
+        return (
+          <span className={`inline-flex items-center gap-1 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 font-bold ${textClass}`}>
+            <HelpCircle className={iconClass} />
+            Xem FAQ
+          </span>
+        );
+      case 'Lead':
+        return (
+          <span className={`inline-flex items-center gap-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold ${textClass}`}>
+            <Sparkles className={iconClass} />
+            Lead
+          </span>
+        );
+      case 'Contact':
+        return (
+          <span className={`inline-flex items-center gap-1 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-bold ${textClass}`}>
+            <PhoneCall className={iconClass} />
+            Contact
+          </span>
+        );
+      case 'CompleteRegistration':
+      case 'Purchase':
+        return (
+          <span className={`inline-flex items-center gap-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold ${textClass}`}>
+            <CheckCircle className={iconClass} />
+            Hoàn Tất
+          </span>
+        );
+      default:
+        return (
+          <span className={`inline-flex items-center gap-1 rounded-full bg-zinc-500/20 text-zinc-300 border border-zinc-500/30 font-bold ${textClass}`}>
+            <Activity className={iconClass} />
+            {eventName}
+          </span>
+        );
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#0E131F] text-zinc-100 flex flex-col font-sans selection:bg-[#FF6320] selection:text-white">
@@ -2376,7 +2499,7 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
             </div>
 
             {/* KPI Summary Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3.5">
               {/* Card 1: Active Pixel */}
               <div className="rounded-xl sm:rounded-2xl bg-[#151D2C] border border-white/10 p-3 sm:p-4 shadow-lg relative overflow-hidden flex flex-col justify-between">
                 <div className="flex items-center justify-between">
@@ -2427,7 +2550,35 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
                 </div>
               </div>
 
-              {/* Card 3: Lead Events */}
+              {/* Card 3: ViewContent Events */}
+              <div className="rounded-xl sm:rounded-2xl bg-[#151D2C] border border-white/10 p-3 sm:p-4 shadow-lg relative overflow-hidden flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-zinc-400">Xem Chi Tiết</span>
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-indigo-500/15 text-indigo-400 flex items-center justify-center">
+                    <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  </div>
+                </div>
+                <div className="mt-2 sm:mt-3">
+                  <div className="text-xl sm:text-2xl font-black text-indigo-400">{trackingStats.viewContentEvents || 0}</div>
+                  <span className="text-[11px] text-zinc-400 mt-0.5 block hidden sm:block">ViewContent</span>
+                </div>
+              </div>
+
+              {/* Card 4: InitiateCheckout Events */}
+              <div className="rounded-xl sm:rounded-2xl bg-[#151D2C] border border-white/10 p-3 sm:p-4 shadow-lg relative overflow-hidden flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-zinc-400">Khởi Tạo ĐK</span>
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-orange-500/15 text-orange-400 flex items-center justify-center">
+                    <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  </div>
+                </div>
+                <div className="mt-2 sm:mt-3">
+                  <div className="text-xl sm:text-2xl font-black text-[#FF6320]">{trackingStats.initiateCheckoutEvents || 0}</div>
+                  <span className="text-[11px] text-zinc-400 mt-0.5 block hidden sm:block">InitiateCheckout</span>
+                </div>
+              </div>
+
+              {/* Card 5: Lead Events */}
               <div className="rounded-xl sm:rounded-2xl bg-[#151D2C] border border-white/10 p-3 sm:p-4 shadow-lg relative overflow-hidden flex flex-col justify-between">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-zinc-400">Chuyển Đổi Lead</span>
@@ -2437,35 +2588,25 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
                 </div>
                 <div className="mt-2 sm:mt-3">
                   <div className="text-xl sm:text-2xl font-black text-[#FFA153]">{trackingStats.leadEvents}</div>
-                  <span className="text-[11px] text-zinc-400 mt-0.5 block hidden sm:block">Khách đăng ký form</span>
+                  <span className="text-[11px] text-zinc-400 mt-0.5 block hidden sm:block">Gửi form</span>
                 </div>
               </div>
 
-              {/* Card 4: Contact Events */}
+              {/* Card 6: Contact & Complete */}
               <div className="rounded-xl sm:rounded-2xl bg-[#151D2C] border border-white/10 p-3 sm:p-4 shadow-lg relative overflow-hidden flex flex-col justify-between">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-zinc-400">Đã Tư Vấn</span>
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-cyan-500/15 text-cyan-400 flex items-center justify-center">
-                    <PhoneCall className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  </div>
-                </div>
-                <div className="mt-2 sm:mt-3">
-                  <div className="text-xl sm:text-2xl font-black text-cyan-400">{trackingStats.contactEvents}</div>
-                  <span className="text-[11px] text-zinc-400 mt-0.5 block hidden sm:block">Admin gọi tư vấn</span>
-                </div>
-              </div>
-
-              {/* Card 5: Completed Registrations */}
-              <div className="rounded-xl sm:rounded-2xl bg-[#151D2C] border border-white/10 p-3 sm:p-4 shadow-lg relative overflow-hidden col-span-2 lg:col-span-1 flex flex-col justify-between">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-zinc-400">Hoàn Tất Lắp Đặt</span>
+                  <span className="text-xs font-semibold text-zinc-400">Liên Hệ & Đơn</span>
                   <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
                     <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
                 </div>
                 <div className="mt-2 sm:mt-3">
-                  <div className="text-xl sm:text-2xl font-black text-emerald-400">{trackingStats.completedEvents}</div>
-                  <span className="text-[11px] text-zinc-400 mt-0.5 block hidden sm:block">Chốt đơn thành công</span>
+                  <div className="text-xl sm:text-2xl font-black text-emerald-400">
+                    {trackingStats.contactEvents + trackingStats.completedEvents}
+                  </div>
+                  <span className="text-[11px] text-zinc-400 mt-0.5 block hidden sm:block">
+                    {trackingStats.contactEvents} tư vấn • {trackingStats.completedEvents} xong
+                  </span>
                 </div>
               </div>
             </div>
@@ -2716,6 +2857,76 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
                     </button>
                     <button
                       type="button"
+                      onClick={() => setLogFilter('PageView')}
+                      className={`px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${logFilter === 'PageView'
+                        ? 'bg-sky-500/30 text-sky-300 border border-sky-500/40'
+                        : 'bg-white/5 text-zinc-400 hover:text-white'
+                        }`}
+                    >
+                      Xem Trang ({trackingStats.pageViewEvents || 0})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLogFilter('ViewContent')}
+                      className={`px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${logFilter === 'ViewContent'
+                        ? 'bg-indigo-500/30 text-indigo-300 border border-indigo-500/40'
+                        : 'bg-white/5 text-zinc-400 hover:text-white'
+                        }`}
+                    >
+                      Xem Gói ({trackingStats.viewContentEvents || 0})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLogFilter('InitiateCheckout')}
+                      className={`px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${logFilter === 'InitiateCheckout'
+                        ? 'bg-orange-500/30 text-orange-300 border border-orange-500/40'
+                        : 'bg-white/5 text-zinc-400 hover:text-white'
+                        }`}
+                    >
+                      Khởi Tạo ({trackingStats.initiateCheckoutEvents || 0})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLogFilter('FindLocation')}
+                      className={`px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${logFilter === 'FindLocation'
+                        ? 'bg-teal-500/30 text-teal-300 border border-teal-500/40'
+                        : 'bg-white/5 text-zinc-400 hover:text-white'
+                        }`}
+                    >
+                      Khu Vực ({trackingStats.findLocationEvents || 0})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLogFilter('Search')}
+                      className={`px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${logFilter === 'Search'
+                        ? 'bg-purple-500/30 text-purple-300 border border-purple-500/40'
+                        : 'bg-white/5 text-zinc-400 hover:text-white'
+                        }`}
+                    >
+                      Tìm Kiếm ({trackingStats.searchEvents || 0})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLogFilter('CustomizeProduct')}
+                      className={`px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${logFilter === 'CustomizeProduct'
+                        ? 'bg-pink-500/30 text-pink-300 border border-pink-500/40'
+                        : 'bg-white/5 text-zinc-400 hover:text-white'
+                        }`}
+                    >
+                      Tùy Chọn ({trackingStats.customizeProductEvents || 0})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLogFilter('ViewFAQ')}
+                      className={`px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${logFilter === 'ViewFAQ'
+                        ? 'bg-yellow-500/30 text-yellow-300 border border-yellow-500/40'
+                        : 'bg-white/5 text-zinc-400 hover:text-white'
+                        }`}
+                    >
+                      FAQ ({trackingStats.viewFaqEvents || 0})
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => setLogFilter('Lead')}
                       className={`px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${logFilter === 'Lead'
                         ? 'bg-amber-500/30 text-amber-300 border border-amber-500/40'
@@ -2850,22 +3061,7 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
                             </td>
 
                             <td className="py-3 px-4 whitespace-nowrap">
-                              {log.eventName === 'Lead' ? (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[11px] font-bold">
-                                  <Sparkles className="w-2.5 h-2.5" />
-                                  Lead
-                                </span>
-                              ) : log.eventName === 'Contact' ? (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-[11px] font-bold">
-                                  <PhoneCall className="w-2.5 h-2.5" />
-                                  Contact
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[11px] font-bold">
-                                  <CheckCircle className="w-2.5 h-2.5" />
-                                  {log.eventName}
-                                </span>
-                              )}
+                              {renderEventBadge(log.eventName)}
                             </td>
 
                             <td className="py-3 px-4 font-mono text-[11px] text-zinc-300">
@@ -2945,22 +3141,7 @@ export default function AdminDashboardClient({ username }: AdminDashboardClientP
                           </div>
 
                           <div className="shrink-0">
-                            {log.eventName === 'Lead' ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold">
-                                <Sparkles className="w-2 h-2" />
-                                Lead
-                              </span>
-                            ) : log.eventName === 'Contact' ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-[10px] font-bold">
-                                <PhoneCall className="w-2 h-2" />
-                                Contact
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">
-                                <CheckCircle className="w-2 h-2" />
-                                {log.eventName}
-                              </span>
-                            )}
+                            {renderEventBadge(log.eventName, 'xs')}
                           </div>
                         </div>
 

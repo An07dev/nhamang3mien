@@ -151,6 +151,26 @@ export async function POST(request: NextRequest) {
           },
         });
 
+        // Ghi vào CapiLog tổng hợp
+        const CapiLog = (await import('@/models/CapiLog')).default;
+        await CapiLog.create({
+          eventName: 'Lead',
+          eventId: finalEventId,
+          leadId: newLead._id.toString(),
+          leadName: newLead.name,
+          phone: newLead.phone,
+          province: newLead.province,
+          packageName: newLead.packageInterest,
+          clientIp,
+          userAgent,
+          success: Boolean(capiRes.success),
+          response: capiRes.success
+            ? `Thành công (Events: ${capiRes.eventsReceived || 1})`
+            : (capiRes.error || 'Thất bại'),
+          fbtraceId: capiRes.fbtraceId || '',
+          sentAt: new Date(),
+        }).catch(() => {});
+
         // Đồng thời bắn sự kiện CompleteRegistration lên CAPI
         sendMetaCapiEvent({
           eventName: 'CompleteRegistration',
@@ -169,6 +189,24 @@ export async function POST(request: NextRequest) {
             lead_id: newLead._id.toString(),
             status: 'success',
           },
+        }).then(async (crRes) => {
+          if (crRes && crRes.success) {
+            await CapiLog.create({
+              eventName: 'CompleteRegistration',
+              eventId: finalEventId,
+              leadId: newLead._id.toString(),
+              leadName: newLead.name,
+              phone: newLead.phone,
+              province: newLead.province,
+              packageName: newLead.packageInterest,
+              clientIp,
+              userAgent,
+              success: true,
+              response: `Thành công (Events: ${crRes.eventsReceived || 1})`,
+              fbtraceId: crRes.fbtraceId || '',
+              sentAt: new Date(),
+            }).catch(() => {});
+          }
         }).catch((e) => console.warn('[CAPI CompleteRegistration Error]:', e?.message));
       }
     } catch (capiErr: any) {

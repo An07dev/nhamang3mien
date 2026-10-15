@@ -1,12 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 import Script from 'next/script';
-import { trackPixel, trackContact } from '@/lib/meta-pixel';
+import { trackContact, trackPageView } from '@/lib/meta-pixel';
 import { PublicTrackingConfig } from '@/lib/tracking-config';
 
 export default function MetaPixelTracker() {
   const [config, setConfig] = useState<PublicTrackingConfig | null>(null);
+  const pathname = usePathname();
+  const lastTrackedPath = useRef<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -30,6 +33,22 @@ export default function MetaPixelTracker() {
       isMounted = false;
     };
   }, []);
+
+  // Bắn sự kiện PageView đồng thời lên Pixel & CAPI khi tải trang hoặc chuyển route
+  useEffect(() => {
+    if (!config?.isEnabled || !config?.pixelId) return;
+    if (!pathname || pathname.startsWith('/admin') || pathname.startsWith('/api')) return;
+
+    if (lastTrackedPath.current === pathname) return;
+    lastTrackedPath.current = pathname;
+
+    // Chờ tiêu đề trang cập nhật (hoặc DOM sẵn sàng)
+    const timer = setTimeout(() => {
+      trackPageView(document.title || 'FPT 3 Miền');
+    }, 150);
+
+    return () => clearTimeout(timer);
+  }, [pathname, config]);
 
   // Lắng nghe click tự động vào các nút gọi điện & Zalo trên toàn trang
   useEffect(() => {
@@ -81,7 +100,6 @@ export default function MetaPixelTracker() {
             s.parentNode.insertBefore(t,s)}(window, document,'script',
             'https://connect.facebook.net/en_US/fbevents.js');
             fbq('init', '${pixelId}');
-            fbq('track', 'PageView');
           `,
         }}
       />

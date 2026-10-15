@@ -96,6 +96,7 @@ export async function sendCapiBackground(
     fetch('/api/tracking/event', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      keepalive: true,
       body: JSON.stringify({
         eventName,
         eventId,
@@ -222,28 +223,71 @@ export function trackContact(
 }
 
 // D. Khách chọn khu vực / Tỉnh thành (FindLocation)
-export function trackFindLocation(provinceName: string): void {
-  trackPixel('FindLocation', {
-    content_name: provinceName,
-  });
+export function trackFindLocation(provinceName: string, options?: TrackMetaOptions): string {
+  return trackMetaEvent(
+    'FindLocation',
+    {
+      content_name: provinceName,
+    },
+    { sendCapi: true, ...options }
+  );
 }
 
 // E. Khách chuyển tab danh mục / Lọc gói cước (Search)
-export function trackSearchCategory(categoryName: string, categoryKey?: string): void {
-  trackPixel('Search', {
-    search_string: categoryName,
-    content_category: categoryKey || categoryName,
-  });
+export function trackSearchCategory(
+  categoryName: string,
+  categoryKey?: string,
+  options?: TrackMetaOptions
+): string {
+  return trackMetaEvent(
+    'Search',
+    {
+      search_string: categoryName,
+      content_category: categoryKey || categoryName,
+    },
+    { sendCapi: true, ...options }
+  );
 }
 
 // F. Khách thay đổi tùy chọn / kỳ thanh toán (CustomizeProduct)
 export function trackCustomizeProduct(
   packageName: string,
-  option: { name: string; value: string }
-): void {
-  trackPixel('CustomizeProduct', {
-    content_name: packageName,
-    custom_name: option.name,
-    custom_value: option.value,
-  });
+  option: { name: string; value: string },
+  options?: TrackMetaOptions
+): string {
+  return trackMetaEvent(
+    'CustomizeProduct',
+    {
+      content_name: packageName,
+      custom_name: option.name,
+      custom_value: option.value,
+    },
+    { sendCapi: true, ...options }
+  );
+}
+
+// G. Khách xem câu hỏi thường gặp FAQ (ViewFAQ)
+export function trackViewFAQ(question: string, options?: TrackMetaOptions): string {
+  return trackMetaEvent(
+    'ViewFAQ',
+    {
+      content_name: question,
+      question,
+    },
+    { sendCapi: true, ...options }
+  );
+}
+
+// H. Khách xem trang (PageView)
+export function trackPageView(
+  pageTitle?: string,
+  options?: TrackMetaOptions
+): string {
+  return trackMetaEvent(
+    'PageView',
+    {
+      page_title: pageTitle || (typeof document !== 'undefined' ? document.title : ''),
+    },
+    { sendCapi: true, ...options }
+  );
 }
